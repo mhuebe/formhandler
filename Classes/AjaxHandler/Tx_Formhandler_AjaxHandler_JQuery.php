@@ -7,33 +7,33 @@ class Tx_Formhandler_AjaxHandler_Jquery extends Tx_Formhandler_AbstractAjaxHandl
 	}
 
 	public function fillAjaxMarkers(&$markers) {
-		$settings = $this->globals->getSession()->get('settings');
-		$initial = $this->utilityFuncs->getSingle($settings['ajax.']['config.'], 'initial');
+		$settings = Tx_Formhandler_Globals::$session->get('settings');
+		$initial = Tx_Formhandler_StaticFuncs::getSingle($settings['ajax.']['config.'], 'initial');
 		
-		$loadingImg = $this->utilityFuncs->getSingle($settings['ajax.']['config.'], 'loading');
+		$loadingImg = Tx_Formhandler_StaticFuncs::getSingle($settings['ajax.']['config.'], 'loading');
 		if(strlen($loadingImg) === 0) {
 			$loadingImg = t3lib_extMgm::extRelPath('formhandler') . 'Resources/Images/ajax-loader.gif';
 			$loadingImg = '<img src="' . $loadingImg . '"/>';
 		}
 
 		//parse validation settings
-		if (is_array($settings['validators.']) && intval($settings['validators.']['disable']) !== 1) {
+		if (is_array($settings['validators.'])) {
 			foreach ($settings['validators.'] as $key => $validatorSettings) {
-				if (is_array($validatorSettings['config.']['fieldConf.']) && intval($validatorSettings['config.']['disable']) !== 1) {
+				if (is_array($validatorSettings['config.']['fieldConf.'])) {
 					foreach ($validatorSettings['config.']['fieldConf.'] as $fieldname => $fieldSettings) {
 						$replacedFieldname = str_replace('.', '', $fieldname);
 						$fieldname = $replacedFieldname;
-						if ($this->globals->getFormValuesPrefix()) {
-							$fieldname = $this->globals->getFormValuesPrefix() . '[' . $fieldname . ']';
+						if (Tx_Formhandler_Globals::$formValuesPrefix) {
+							$fieldname = Tx_Formhandler_Globals::$formValuesPrefix . '[' . $fieldname . ']';
 						}
 						$params = array(
 							'eID' => 'formhandler',
 							'pid' => $GLOBALS['TSFE']->id,
-							'randomID' => $this->globals->getRandomID(),
+							'randomID' => Tx_Formhandler_Globals::$randomID,
 							'field' => $replacedFieldname,
 							'value' => ''
 						);
-						$url = $this->globals->getCObj()->getTypoLink_Url($GLOBALS['TSFE']->id, $params);
+						$url = Tx_Formhandler_Globals::$cObj->getTypoLink_Url($GLOBALS['TSFE']->id, $params);
 						$markers['###validate_' . $replacedFieldname . '###'] = '
 							<span class="loading" id="loading_' . $replacedFieldname . '" style="display:none">' . $loadingImg . '</span>
 							<span id="result_' . $replacedFieldname . '">' . str_replace('###fieldname###', $replacedFieldname, $initial) . '</span>
@@ -72,9 +72,9 @@ class Tx_Formhandler_AjaxHandler_Jquery extends Tx_Formhandler_AbstractAjaxHandl
 			'pid' => $GLOBALS['TSFE']->id,
 			'field' => $field,
 			'uploadedFileName' => $uploadedFileName,
-			'randomID' => $this->globals->getRandomID()
+			'randomID' => Tx_Formhandler_Globals::$randomID
 		);
-		$url = $this->globals->getCObj()->getTypoLink_Url($GLOBALS['TSFE']->id, $params);
+		$url = Tx_Formhandler_Globals::$cObj->getTypoLink_Url($GLOBALS['TSFE']->id, $params);
 		return '<a  
 				class="formhandler_removelink" 
 				href="' . $url . '"

@@ -23,22 +23,25 @@
  */
 class Tx_Formhandler_ErrorCheck_MinItems extends Tx_Formhandler_AbstractErrorCheck {
 
-	public function init($gp, $settings) {
-		parent::init($gp, $settings);
-		$this->mandatoryParameters = array('value');
-	}
-
-	public function check() {
+	/**
+	 * Validates that a specified field is an array and has at least a specified amount of items
+	 *
+	 * @param array &$check The TypoScript settings for this error check
+	 * @param string $name The field name
+	 * @param array &$gp The current GET/POST parameters
+	 * @return string The error string
+	 */
+	public function check(&$check, $name, &$gp) {
 		$checkFailed = '';
 
-		if (isset($this->gp[$this->formFieldName])) {
-			$value = $this->utilityFuncs->getSingle($this->settings['params'], 'value');
-			if (is_array($this->gp[$this->formFieldName])) {
-				if (count($this->gp[$this->formFieldName]) < $value) {
-					$checkFailed = $this->getCheckFailed();
+		if (isset($gp[$name])) {
+			$value = Tx_Formhandler_StaticFuncs::getSingle($check['params'], 'value');
+			if (is_array($gp[$name])) {
+				if (count($gp[$name]) < $value) {
+					$checkFailed = $this->getCheckFailed($check);
 				}
 			} else {
-				$checkFailed = $this->getCheckFailed();
+				$checkFailed = $this->getCheckFailed($check);
 			}
 		}
 		return $checkFailed;

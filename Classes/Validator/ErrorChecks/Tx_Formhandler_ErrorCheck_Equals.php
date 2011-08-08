@@ -23,22 +23,25 @@
  */
 class Tx_Formhandler_ErrorCheck_Equals extends Tx_Formhandler_AbstractErrorCheck {
 
-	public function init($gp, $settings) {
-		parent::init($gp, $settings);
-		$this->mandatoryParameters = array('word');
-	}
-
-	public function check() {
+	/**
+	 * Validates that a specified field equals a specified word
+	 *
+	 * @param array &$check The TypoScript settings for this error check
+	 * @param string $name The field name
+	 * @param array &$gp The current GET/POST parameters
+	 * @return string The error string
+	 */
+	public function check(&$check, $name, &$gp) {
 		$checkFailed = '';
-		$formValue = trim($this->gp[$this->formFieldName]);
+		$formValue = trim($gp[$name]);
 
-		if (isset($this->gp[$this->formFieldName]) && strlen(trim($this->gp[$this->formFieldName])) > 0) {
-			$checkValue = $this->utilityFuncs->getSingle($this->settings['params'], 'word');
+		if (isset($gp[$name]) && strlen(trim($gp[$name])) > 0) {
+			$checkValue = Tx_Formhandler_StaticFuncs::getSingle($check['params'], 'word');
 			if (strcasecmp($formValue, $checkValue)) {
 
 					//remove userfunc settings
-				unset($this->settings['params']['word.']);
-				$checkFailed = $this->getCheckFailed();
+				unset($check['params']['word.']);
+				$checkFailed = $this->getCheckFailed($check);
 			}
 		}
 		return $checkFailed;

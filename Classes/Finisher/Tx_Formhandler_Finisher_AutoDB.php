@@ -101,7 +101,7 @@ class Tx_Formhandler_Finisher_AutoDB extends Tx_Formhandler_Finisher_DB {
 	protected function getFormFieldNames() {
 		$pattern = '/\<(?=input|select|textarea)[^\>]*name=("|\')([^"\']*)\1/i';
 
-		$templateFile = $this->globals->getTemplateCode();
+		$templateFile = Tx_Formhandler_Globals::$templateCode;
 		preg_match_all($pattern, $templateFile, $matches);
 
 		return (array) $matches[2];
@@ -113,8 +113,8 @@ class Tx_Formhandler_Finisher_AutoDB extends Tx_Formhandler_Finisher_DB {
 	 * @return array
 	 */
 	protected function getFormFields() {
-		$invokePrefix = strlen($this->globals->getFormValuesPrefix()) > 0;
-		$prefix = $this->globals->getFormValuesPrefix();
+		$invokePrefix = strlen(Tx_Formhandler_Globals::$formValuesPrefix) > 0;
+		$prefix = Tx_Formhandler_Globals::$formValuesPrefix;
 		$fields = array();
 
 		foreach ($this->getFormFieldNames() as $fieldName) {
@@ -144,20 +144,19 @@ class Tx_Formhandler_Finisher_AutoDB extends Tx_Formhandler_Finisher_DB {
 				unset($fields[$exclude]);
 			}
 		}
-
-		$globalSettings = $this->globals->getSettings();
-		if (intval($globalSettings['debug']) === 1) {
+		
+		if (Tx_Formhandler_Globals::$settings['debug']) {
 			$this->db->debugOutput = 1;
 		}
 		
-		$res = $this->db->sql_query("SHOW TABLES LIKE '" . $this->table . "'");
+		$res = $this->db->sql_query("SHOW TABLES LIKE '".$this->table."'");
 		
 		if (!$this->db->sql_num_rows($res)) {
-			$query = "CREATE TABLE `" . $this->table . "` (
-				`" . $this->key . "` INT( 11 ) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY
+			$query = "CREATE TABLE `".$this->table."` (
+				`".$this->key."` INT( 11 ) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY
 			)";
 			$this->db->sql_query($query);
-			$this->utilityFuncs->debugMessage('sql_request', array($query));
+			Tx_Formhandler_StaticFuncs::debugMessage('sql_request', array($query));
 			$dbFields = array($this->key);
 		}else{
 			$dbFields = array_keys($this->db->admin_get_fields($this->table));
@@ -166,14 +165,14 @@ class Tx_Formhandler_Finisher_AutoDB extends Tx_Formhandler_Finisher_DB {
 		$createFields = array_diff($fields, $dbFields);
 		
 		if (count($createFields)) {
-			$sql = 'ALTER TABLE ' . $this->table . ' ADD `';
-			$sql .= implode('` ' . $this->newFieldsSqlAttribs . ', ADD `', $createFields);
-			$sql .= '` ' . $this->newFieldsSqlAttribs;
+			$sql = 'ALTER TABLE '.$this->table.' ADD `';
+			$sql .= implode('` '.$this->newFieldsSqlAttribs.', ADD `', $createFields);
+			$sql .= '` '.$this->newFieldsSqlAttribs.'';
 			
 			$this->db->sql_query($sql);
-			$this->utilityFuncs->debugMessage('sql_request', array($sql));
+			Tx_Formhandler_StaticFuncs::debugMessage('sql_request', array($sql));
 			if($this->db->sql_error()) {
-				$this->utilityFuncs->debugMessage('error', array($this->db->sql_error()), 3);
+				Tx_Formhandler_StaticFuncs::debugMessage('error', array($this->db->sql_error()), 3);
 			}
 		}
 	}

@@ -20,17 +20,7 @@ class Tx_Formhandler_Logger_DevLog extends Tx_Formhandler_AbstractLogger {
 			$message = 'Caught possible spamming on page ' . $GLOBALS['TSFE']->id . '!';
 			$severity = 2;
 		}
-		$logParams = $this->gp;
-		if($this->settings['excludeFields']) {
-			$excludeFields = $this->utilityFuncs->getSingle($this->settings, 'excludeFields');
-			$excludeFields = t3lib_div::trimExplode(',', $excludeFields);
-			foreach($excludeFields as $excludeField) {
-				unset($logParams[$excludeField]);
-			}
-		}
-		t3lib_div::devLog($message, 'formhandler', $severity, $logParams);
-		
-		return $this->gp;
+		t3lib_div::devLog($message, 'formhandler', $severity, $this->gp);
 	}
 }
 

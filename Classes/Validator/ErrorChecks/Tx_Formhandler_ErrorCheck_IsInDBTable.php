@@ -23,27 +23,30 @@
  */
 class Tx_Formhandler_ErrorCheck_IsInDBTable extends Tx_Formhandler_AbstractErrorCheck {
 
-	public function init($gp, $settings) {
-		parent::init($gp, $settings);
-		$this->mandatoryParameters = array('table', 'field');
-	}
-
-	public function check() {
+	/**
+	 * Validates that a specified field's value is found in a specified db table
+	 *
+	 * @param array &$check The TypoScript settings for this error check
+	 * @param string $name The field name
+	 * @param array &$gp The current GET/POST parameters
+	 * @return string The error string
+	 */
+	public function check(&$check, $name, &$gp) {
 		$checkFailed = '';
 		
-		if (isset($this->gp[$this->formFieldName]) && strlen(trim($this->gp[$this->formFieldName])) > 0) {
-			$checkTable = $this->utilityFuncs->getSingle($this->settings['params'], 'table');
-			$checkField = $this->utilityFuncs->getSingle($this->settings['params'], 'field');
-			$additionalWhere = $this->utilityFuncs->getSingle($this->settings['params'], 'additionalWhere');
+		if (isset($gp[$name]) && strlen(trim($gp[$name])) > 0) {
+			$checkTable = Tx_Formhandler_StaticFuncs::getSingle($check['params'], 'table');
+			$checkField = Tx_Formhandler_StaticFuncs::getSingle($check['params'], 'field');
+			$additionalWhere = Tx_Formhandler_StaticFuncs::getSingle($check['params'], 'additionalWhere');
 			if (!empty($checkTable) && !empty($checkField)) {
-				$where = $checkField . '=' . $GLOBALS['TYPO3_DB']->fullQuoteStr($this->gp[$this->formFieldName], $checkTable) . ' ' . $additionalWhere;
-				$showHidden = intval($this->settings['params']['showHidden']) === 1 ? 1 : 0;
+				$where = $checkField . '=' . $GLOBALS['TYPO3_DB']->fullQuoteStr($gp[$name], $checkTable) . ' ' . $additionalWhere;
+				$showHidden = intval($check['params']['showHidden']) === 1 ? 1 : 0;
 				$where .= $GLOBALS['TSFE']->sys_page->enableFields($checkTable, $showHidden);
 				$res = $GLOBALS['TYPO3_DB']->exec_SELECTquery($checkField, $checkTable, $where);
 				if ($res && !$GLOBALS['TYPO3_DB']->sql_num_rows($res)) {
-					$checkFailed = $this->getCheckFailed();
+					$checkFailed = $this->getCheckFailed($check);
 				} elseif (!$res) {
-					$this->utilityFuncs->debugMessage('error', array($GLOBALS['TYPO3_DB']->sql_error()), 3);
+					Tx_Formhandler_StaticFuncs::debugMessage('error', array($GLOBALS['TYPO3_DB']->sql_error()), 3);
 				}
 				$GLOBALS['TYPO3_DB']->sql_free_result($res);
 			}

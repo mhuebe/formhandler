@@ -23,7 +23,15 @@
  */
 class Tx_Formhandler_ErrorCheck_Captcha extends Tx_Formhandler_AbstractErrorCheck {
 
-	public function check() {
+	/**
+	 * Validates that a specified field's value matches the generated word of the extension "captcha"
+	 *
+	 * @param array &$check The TypoScript settings for this error check
+	 * @param string $name The field name
+	 * @param array &$gp The current GET/POST parameters
+	 * @return string The error string
+	 */
+	public function check(&$check, $name, &$gp) {
 		$checkFailed = '';
 
 		// get captcha sting
@@ -35,11 +43,11 @@ class Tx_Formhandler_ErrorCheck_Captcha extends Tx_Formhandler_AbstractErrorChec
 			$_SESSION['tx_captcha_string'] = '';
 
 			// make sure the answer given to the captcha is not empty
-			if ($captchaStr != $this->gp[$this->formFieldName] || strlen(trim($this->gp[$this->formFieldName])) === 0) {
-				$checkFailed = $this->getCheckFailed();
+			if ($captchaStr != $gp[$name] || strlen(trim($gp[$name])) === 0) {
+				$checkFailed = $this->getCheckFailed($check);
 			}
 		} else {
-			$checkFailed = $this->getCheckFailed();
+			$checkFailed = $this->getCheckFailed($check);
 		}
 		return $checkFailed;
 	}

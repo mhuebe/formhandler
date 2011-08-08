@@ -23,19 +23,22 @@
  */
 class Tx_Formhandler_ErrorCheck_FileMaxCount extends Tx_Formhandler_AbstractErrorCheck {
 
-	public function init($gp, $settings) {
-		parent::init($gp, $settings);
-		$this->mandatoryParameters = array('maxCount');
-	}
-
-	public function check() {
+	/**
+	 * Validates that up to x files get uploaded via the specified upload field.
+	 *
+	 * @param array &$check The TypoScript settings for this error check
+	 * @param string $name The field name
+	 * @param array &$gp The current GET/POST parameters
+	 * @return string The error string
+	 */
+	public function check(&$check, $name, &$gp) {
 		$checkFailed = '';
 
-		$files = $this->globals->getSession()->get('files');
-		$settings = $this->globals->getSession()->get('settings');
-		$currentStep = $this->globals->getSession()->get('currentStep');
-		$lastStep = $this->globals->getSession()->get('lastStep');
-		$maxCount = $this->utilityFuncs->getSingle($this->settings['params'], 'maxCount');
+		$files = Tx_Formhandler_Globals::$session->get('files');
+		$settings = Tx_Formhandler_Globals::$session->get('settings');
+		$currentStep = Tx_Formhandler_Globals::$session->get('currentStep');
+		$lastStep = Tx_Formhandler_Globals::$session->get('lastStep');
+		$maxCount = Tx_Formhandler_StaticFuncs::getSingle($check['params'], 'maxCount');
 		if (is_array($files[$name]) &&
 			count($files[$name]) >= $maxCount &&
 			$currentStep == $lastStep) {
@@ -47,14 +50,14 @@ class Tx_Formhandler_ErrorCheck_FileMaxCount extends Tx_Formhandler_AbstractErro
 				}
 			}
 			if ($found) {
-				$checkFailed = $this->getCheckFailed();
+				$checkFailed = $this->getCheckFailed($check);
 			}
 		} elseif (is_array($files[$name]) &&
 			$currentStep > $lastStep) {
 
 			foreach ($_FILES as $idx=>$info) {
 				if (strlen($info['name'][$name]) > 0 && count($files[$name]) >= $maxCount) {
-					$checkFailed = $this->getCheckFailed();
+					$checkFailed = $this->getCheckFailed($check);
 				}
 			}
 

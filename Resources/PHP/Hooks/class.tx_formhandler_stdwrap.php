@@ -16,12 +16,11 @@ class tx_formhandler_stdwrap implements tslib_content_stdWrapHook {
 	 */
 	public function stdWrapPreProcess($content, array $configuration, tslib_cObj &$parentObject) {
 		if(intval($configuration['sanitize']) === 1) {
-			$globals = Tx_Formhandler_Globals::getInstance();
 			$this->originalGET = $_GET;
 			$this->originalPOST = $_POST;
-			$prefix = $globals->getFormValuesPrefix();
-			$_GET[$prefix] = $globals->getGP();
-			$_POST[$prefix] = $globals->getGP();
+			$prefix = Tx_Formhandler_Globals::$formValuesPrefix;
+			$_GET[$prefix] = Tx_Formhandler_Globals::$gp;
+			$_POST[$prefix] = Tx_Formhandler_Globals::$gp;
 		}
 		return $content;
 	}

@@ -23,20 +23,23 @@
  */
 class Tx_Formhandler_ErrorCheck_BetweenLength extends Tx_Formhandler_AbstractErrorCheck {
 
-	public function init($gp, $settings) {
-		parent::init($gp, $settings);
-		$this->mandatoryParameters = array('minValue', 'maxValue');
-	}
-
-	public function check() {
+	/**
+	 * Validates that a specified field is a string and has a length between two specified values
+	 *
+	 * @param array &$check The TypoScript settings for this error check
+	 * @param string $name The field name
+	 * @param array &$gp The current GET/POST parameters
+	 * @return string The error string
+	 */
+	public function check(&$check, $name, &$gp) {
 		$checkFailed = '';
-		$min = intval($this->utilityFuncs->getSingle($this->settings['params'], 'minValue'));
-		$max = intval($this->utilityFuncs->getSingle($this->settings['params'], 'maxValue'));
-		if (isset($this->gp[$this->formFieldName]) &&
-			(mb_strlen($this->gp[$this->formFieldName], $GLOBALS['TSFE']->renderCharset) < intval($min) || 
-			mb_strlen($this->gp[$this->formFieldName], $GLOBALS['TSFE']->renderCharset) > intval($max))) {
+		$min = intval(Tx_Formhandler_StaticFuncs::getSingle($check['params'], 'minValue'));
+		$max = intval(Tx_Formhandler_StaticFuncs::getSingle($check['params'], 'maxValue'));
+		if (isset($gp[$name]) &&
+			(mb_strlen($gp[$name], $GLOBALS['TSFE']->renderCharset) < intval($min) || 
+			mb_strlen($gp[$name], $GLOBALS['TSFE']->renderCharset) > intval($max))) {
 
-			$checkFailed = $this->getCheckFailed();
+			$checkFailed = $this->getCheckFailed($check);
 		}
 		return $checkFailed;
 	}

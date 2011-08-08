@@ -24,6 +24,14 @@
 class Tx_Formhandler_Controller_Form extends Tx_Formhandler_AbstractController {
 
 	/**
+	 * The Formhandler component manager
+	 *
+	 * @access protected
+	 * @var Tx_Formhandler_Component_Manager
+	 */
+	protected $componentManager;
+
+	/**
 	 * The current GET/POST parameters of the form
 	 *
 	 * @access protected
@@ -48,6 +56,14 @@ class Tx_Formhandler_Controller_Form extends Tx_Formhandler_AbstractController {
 	protected $formValuesPrefix;
 
 	/**
+	 * The global Formhandler configuration
+	 *
+	 * @access protected
+	 * @var Tx_Formhandler_Configuration
+	 */
+	protected $configuration;
+
+	/**
 	 * The template file to be used. Only if template file was defined via plugin record
 	 *
 	 * @access protected
@@ -62,6 +78,14 @@ class Tx_Formhandler_Controller_Form extends Tx_Formhandler_AbstractController {
 	 * @var array
 	 */
 	protected $langFiles;
+
+	/**
+	 * The cObj
+	 *
+	 * @access protected
+	 * @var tslib_cObj
+	 */
+	protected $cObj;
 
 	/**
 	 * Flag indicating if the form got submitted
@@ -128,6 +152,20 @@ class Tx_Formhandler_Controller_Form extends Tx_Formhandler_AbstractController {
 	protected $finished;
 
 	/**
+	 * The constructor for a finisher setting the component manager and the configuration.
+	 *
+	 * @param Tx_Formhandler_Component_Manager $componentManager
+	 * @param Tx_Formhandler_Configuration $configuration
+	 * @return void
+	 */
+	public function __construct(Tx_Formhandler_Component_Manager $componentManager, Tx_Formhandler_Configuration $configuration) {
+		$this->componentManager = $componentManager;
+		$this->configuration = $configuration;
+		$this->initializeController();
+		$this->cObj = Tx_Formhandler_Globals::$cObj;
+	}
+
+	/**
 	 * Main method of the form handler.
 	 *
 	 * @return rendered view
@@ -138,23 +176,11 @@ class Tx_Formhandler_Controller_Form extends Tx_Formhandler_AbstractController {
 		$this->processFileRemoval();
 
 		$action = t3lib_div::_GP('action');
-		if ($this->globals->getFormValuesPrefix()) {
-			$temp = t3lib_div::_GP($this->globals->getFormValuesPrefix());
+		if (Tx_Formhandler_Globals::$formValuesPrefix) {
+			$temp = t3lib_div::_GP(Tx_Formhandler_Globals::$formValuesPrefix);
 			$action = $temp['action'];
 		}
 		if ($action) {
-
-			//read template file
-			$this->templateFile = $this->utilityFuncs->readTemplateFile($this->templateFile, $this->settings);
-			$this->globals->setTemplateCode($this->templateFile);
-			$this->langFiles = $this->utilityFuncs->readLanguageFiles($this->langFiles, $this->settings);
-			$this->globals->setLangFiles($this->langFiles);
-
-			$this->view->setLangFiles($this->langFiles);
-			$this->view->setSettings($this->settings);
-
-			//reset the template because step had probably been decreased
-			$this->setViewSubpart($this->currentStep);
 			$content = $this->processAction($action);
 			if(strlen(trim($content)) > 0) {
 				return $content;
@@ -171,14 +197,14 @@ class Tx_Formhandler_Controller_Form extends Tx_Formhandler_AbstractController {
 	protected function processAction($action) {
 		$content = '';
 		$gp = $_GET;
-		if ($this->globals->getFormValuesPrefix()) {
-			$gp = t3lib_div::_GP($this->globals->getFormValuesPrefix());
+		if (Tx_Formhandler_Globals::$formValuesPrefix) {
+			$gp = t3lib_div::_GP(Tx_Formhandler_Globals::$formValuesPrefix);
 		}
 		if (is_array($this->settings['finishers.'])) {
 			$finisherConf = array();
 			foreach ($this->settings['finishers.'] as $key => $config) {
 				if (strpos($key, '.') !== FALSE) {
-					$className = $this->utilityFuncs->prepareClassName($config['class']);
+					$className = Tx_Formhandler_StaticFuncs::prepareClassName($config['class']);
 					if ($className === 'Tx_Formhandler_Finisher_SubmittedOK' && is_array($config['config.'])) {
 						$finisherConf = $config['config.'];
 					}
@@ -186,50 +212,31 @@ class Tx_Formhandler_Controller_Form extends Tx_Formhandler_AbstractController {
 			}
 			$params = array();
 			$tstamp = intval($gp['tstamp']);
-			$hash = $GLOBALS['TYPO3_DB']->fullQuoteStr($gp['hash'], 'tx_formhandler_log');
+			$hash = $GLOBALS['TYPO3_DB']->fullQuoteStr($gp['hash']);
 			if ($tstamp && strpos($hash, ' ') === FALSE) {
-				$res = $GLOBALS['TYPO3_DB']->exec_SELECTquery('params', 'tx_formhandler_log', 'tstamp=' . $tstamp . ' AND unique_hash=' . $hash);
+				$res = $GLOBALS['TYPO3_DB']->exec_SELECTquery('params', 'tx_formhandler_log', 'tstamp=' . $tstamp . ' AND key_hash=' . $hash);
 				if ($res && $GLOBALS['TYPO3_DB']->sql_num_rows($res) === 1) {
 					$row = $GLOBALS['TYPO3_DB']->sql_fetch_assoc($res);
 					$GLOBALS['TYPO3_DB']->sql_free_result($res);
 					$params = unserialize($row['params']);
 				}
 			}
-			if ($finisherConf['actions.'][$action . '.'] && !empty($params) && intval($finisherConf['actions.'][$action . '.']['config.']['returns']) !== 1) {
-
+			if ($finisherConf['actions.'][$action . '.'] && !empty($params)) {
 				$class = $finisherConf['actions.'][$action . '.']['class'];
 				if ($class) {
-					$class = $this->utilityFuncs->prepareClassName($class);
+					$class = Tx_Formhandler_StaticFuncs::prepareClassName($class);
 					$object = $this->componentManager->getComponent($class);
 					$object->init($params, $finisherConf['actions.'][$action . '.']['config.']);
 					$object->process();
 				}
 			} elseif($action === 'show') {
-
+				
 				//"show" makes it possible that Finisher_SubmittedOK show its output again
 				$class = 'Tx_Formhandler_Finisher_SubmittedOK';
 				$object = $this->componentManager->getComponent($class);
 				unset($finisherConf['actions.']);
 				$object->init($params, $finisherConf);
 				$content = $object->process();
-			} elseif(intval($finisherConf['actions.'][$action . '.']['config.']['returns']) === 1) {
-				$class = $finisherConf['actions.'][$action . '.']['class'];
-				if ($class) {
-
-					//Makes it possible to make your own Generator class show output
-					$class = $this->utilityFuncs->prepareClassName($class);
-					$object = $this->componentManager->getComponent($class);
-					$object->init($params, $finisherConf['actions.'][$action . '.']['config.']);
-					$content = $object->process();
-				} else {
-
-					//Makes it possible that Finisher_SubmittedOK show its output again
-					$class = 'Tx_Formhandler_Finisher_SubmittedOK';
-					$object = $this->componentManager->getComponent($class);
-					unset($finisherConf['actions.']);
-					$object->init($params, $finisherConf);
-					$content = $object->process();
-				}
 			}
 		}
 		return $content;
@@ -247,55 +254,62 @@ class Tx_Formhandler_Controller_Form extends Tx_Formhandler_AbstractController {
 		} else {
 			$this->loadSettingsForStep($this->currentStep);
 		}
-
+		
 		$this->parseConditions();
+		
+		//read template file
+		$this->templateFile = Tx_Formhandler_StaticFuncs::readTemplateFile($this->templateFile, $this->settings);
+		Tx_Formhandler_Globals::$templateCode = $this->templateFile;
+		$this->langFiles = Tx_Formhandler_StaticFuncs::readLanguageFiles($this->langFiles, $this->settings);
+		Tx_Formhandler_Globals::$langFiles = $this->langFiles;
+		
+		$this->view->setLangFiles($this->langFiles);
+		$this->view->setSettings($this->settings);
+		$this->setViewSubpart($this->currentStep);
 
 		//run init interceptors
-		$this->addFormhandlerClass($this->settings['initInterceptors.'], 'Interceptor_FormProtection');
 		$this->addFormhandlerClass($this->settings['initInterceptors.'], 'Interceptor_Filtreatment');
 		$output = $this->runClasses($this->settings['initInterceptors.']);
 		if (strlen($output) > 0) {
 			return $output;
 		}
 
-		$this->globals->setRandomID($this->gp['randomID']);
+		Tx_Formhandler_Globals::$randomID = $this->gp['randomID'];
+		
+		$this->handleCheckBoxFields();
 
 		//run validation
 		$this->errors = array();
 		$valid = array(TRUE);
-		$this->validateErrorCheckConfig();
 		if (isset($this->settings['validators.']) && 
 			is_array($this->settings['validators.']) && 
 			intval($this->settings['validators.']['disable']) !== 1) {
 
 			foreach ($this->settings['validators.'] as $idx => $tsConfig) {
-				if ($idx !== 'disable') {
-					if (is_array($tsConfig) && isset($tsConfig['class']) && !empty($tsConfig['class'])) {
-						if (intval($tsConfig['disable']) !== 1) {
-							$className = $this->utilityFuncs->prepareClassName($tsConfig['class']);
-							$validator = $this->componentManager->getComponent($className);
-							if ($this->currentStep === $this->lastStep) {
-								$userSetting = t3lib_div::trimExplode(',', $tsConfig['config.']['restrictErrorChecks']);
-								$autoSetting = array(
-									'fileAllowedTypes',
-									'fileRequired',
-									'fileMaxCount',
-									'fileMinCount',
-									'fileMaxSize',
-									'fileMinSize',
-									'fileMaxTotalSize'
-								);
-								$merged = array_merge($userSetting, $autoSetting);
-								$tsConfig['config.']['restrictErrorChecks'] = implode(',', $merged);
-							}
-							$tsConfig['config.'] = $this->addDefaultComponentConfig($tsConfig['config.']);
-							$validator->init($this->gp, $tsConfig['config.']);
-							$res = $validator->validate($this->errors);
-							array_push($valid, $res);
+				if (is_array($tsConfig) && isset($tsConfig['class']) && !empty($tsConfig['class'])) {
+					if (intval($tsConfig['disable']) !== 1) {
+						$className = Tx_Formhandler_StaticFuncs::prepareClassName($tsConfig['class']);
+						$validator = $this->componentManager->getComponent($className);
+						if ($this->currentStep === $this->lastStep) {
+							$userSetting = t3lib_div::trimExplode(',', $tsConfig['config.']['restrictErrorChecks']);
+							$autoSetting = array(
+								'fileAllowedTypes',
+								'fileRequired',
+								'fileMaxCount',
+								'fileMinCount',
+								'fileMaxSize',
+								'fileMinSize'
+							);
+							$merged = array_merge($userSetting, $autoSetting);
+							$tsConfig['config.']['restrictErrorChecks'] = implode(',', $merged);
 						}
-					} else {
-						$this->utilityFuncs->throwException('classesarray_error');
+						$tsConfig['config.'] = $this->addDefaultComponentConfig($tsConfig['config.']);
+						$validator->init($this->gp, $tsConfig['config.']);
+						$res = $validator->validate($this->errors);
+						array_push($valid, $res);
 					}
+				} else {
+					Tx_Formhandler_StaticFuncs::throwException('classesarray_error');
 				}
 			}
 		}
@@ -306,107 +320,57 @@ class Tx_Formhandler_Controller_Form extends Tx_Formhandler_AbstractController {
 			//process files
 			$this->processFiles();
 
-			$this->loadSettingsForStep($this->currentStep);
-			$this->parseConditions();
-
-			//read template file
-			$this->templateFile = $this->utilityFuncs->readTemplateFile($this->templateFile, $this->settings);
-			$this->globals->setTemplateCode($this->templateFile);
-			$this->langFiles = $this->utilityFuncs->readLanguageFiles($this->langFiles, $this->settings);
-			$this->globals->setLangFiles($this->langFiles);
+			//now set the settings to the current step again
+			if ($this->currentStep > $this->lastStep) {
+				$this->loadSettingsForStep($this->currentStep);
+				$this->parseConditions();
+			}
+			
+					//read template file
+			$this->templateFile = Tx_Formhandler_StaticFuncs::readTemplateFile($this->templateFile, $this->settings);
+			Tx_Formhandler_Globals::$templateCode = $this->templateFile;
+			$this->langFiles = Tx_Formhandler_StaticFuncs::readLanguageFiles($this->langFiles, $this->settings);
+			Tx_Formhandler_Globals::$langFiles = $this->langFiles;
 
 			$this->view->setLangFiles($this->langFiles);
 			$this->view->setSettings($this->settings);
 			$this->setViewSubpart($this->currentStep);
-
-			$this->storeGPinSession();
-			$this->mergeGPWithSession();
 
 			//if no more steps
 			if ($this->finished) {
 				return $this->processFinished();
 			} else {
 
+				$this->storeGPinSession();
+				$this->mergeGPWithSession(FALSE, $this->currentStep);
+
 				//display form
 				return $this->view->render($this->gp, $this->errors);
 			}
 		} else {
-
-			//read template file
-			$this->templateFile = $this->utilityFuncs->readTemplateFile($this->templateFile, $this->settings);
-			$this->globals->setTemplateCode($this->templateFile);
-			$this->langFiles = $this->utilityFuncs->readLanguageFiles($this->langFiles, $this->settings);
-			$this->globals->setLangFiles($this->langFiles);
-
-			$this->view->setLangFiles($this->langFiles);
-			$this->view->setSettings($this->settings);
-			$this->setViewSubpart($this->currentStep);
 			return $this->processNotValid();
-		}
-	}
-
-	protected function validateErrorCheckConfig() {
-		if (isset($_FILES) && is_array($_FILES) && !empty($_FILES)) {
-
-			//for all file properties
-			foreach ($_FILES as $sthg => $files) {
-
-				//if a file was uploaded
-				if (isset($files['name']) && is_array($files['name'])) {
-
-					//for all file names
-					$uploadFields = array_keys($files['name']);
-					foreach ($uploadFields as $field) {
-						$valid = FALSE;
-						$hasAllowedTypesCheck = FALSE;
-						if (isset($this->settings['validators.']) && 
-							is_array($this->settings['validators.']) && 
-							intval($this->settings['validators.']['disable']) !== 1) {
-
-							foreach ($this->settings['validators.'] as $idx => $tsConfig) {
-								if($tsConfig['config.']['fieldConf.'][$field . '.']['errorCheck.']) {
-									foreach($tsConfig['config.']['fieldConf.'][$field . '.']['errorCheck.'] as $errorCheck) {
-										if($errorCheck === 'fileAllowedTypes') {
-											$hasAllowedTypesCheck = TRUE;
-										}
-									}
-								}
-							}
-						}
-						if($hasAllowedTypesCheck) {
-							$valid = TRUE;
-						} else {
-							$missingChecks = array();
-							if(!$hasAllowedTypesCheck) {
-								$missingChecks[] = 'fileAllowedTypes';
-							}
-							$this->utilityFuncs->throwException('error_checks_missing', implode(',', $missingChecks), $field);
-						}
-					}
-				}
-			}
 		}
 	}
 
 	protected function processNotValid() {
 		$this->gp['formErrors'] = $this->errors;
-		$this->globals->setGP($this->gp);
+		Tx_Formhandler_Globals::$gp = $this->gp;
 
 		//stay on current step
-		if ($this->lastStep < $this->globals->getSession()->get('currentStep')) {
-			$this->globals->getSession()->set('currentStep', $this->lastStep);
+		if ($this->lastStep < Tx_Formhandler_Globals::$session->get('currentStep')) {
+			Tx_Formhandler_Globals::$session->set('currentStep', $this->lastStep);
 			$this->currentStep = $this->lastStep;
 		}
 
 		//load settings from last step again because an error occurred
 		$this->loadSettingsForStep($this->currentStep);
-		$this->globals->getSession()->set('settings', $this->settings);
+		Tx_Formhandler_Globals::$session->set('settings', $this->settings);
 		
 		//read template file
-		$this->templateFile = $this->utilityFuncs->readTemplateFile($this->templateFile, $this->settings);
-		$this->globals->setTemplateCode($this->templateFile);
-		$this->langFiles = $this->utilityFuncs->readLanguageFiles($this->langFiles, $this->settings);
-		$this->globals->setLangFiles($this->langFiles);
+		$this->templateFile = Tx_Formhandler_StaticFuncs::readTemplateFile($this->templateFile, $this->settings);
+		Tx_Formhandler_Globals::$templateCode = $this->templateFile;
+		$this->langFiles = Tx_Formhandler_StaticFuncs::readLanguageFiles($this->langFiles, $this->settings);
+		Tx_Formhandler_Globals::$langFiles = $this->langFiles;
 
 		$this->view->setLangFiles($this->langFiles);
 		$this->view->setSettings($this->settings);
@@ -416,7 +380,7 @@ class Tx_Formhandler_Controller_Form extends Tx_Formhandler_AbstractController {
 		
 		if ($this->currentStep >= $this->lastStep) {
 			$this->storeGPinSession();
-			$this->mergeGPWithSession();
+			$this->mergeGPWithSession(FALSE, $this->currentStep);
 		}
 
 		//display form
@@ -424,15 +388,18 @@ class Tx_Formhandler_Controller_Form extends Tx_Formhandler_AbstractController {
 	}
 
 	protected function processFinished() {
-		$this->storeSettingsInSession();
+		$this->storeGPinSession();
+		$this->mergeGPWithSession();
 
 		//run save interceptors
-		$this->addFormhandlerClass($this->settings['initInterceptors.'], 'Interceptor_FormProtection');
 		$this->addFormhandlerClass($this->settings['saveInterceptors.'], 'Interceptor_Filtreatment');
 		$output = $this->runClasses($this->settings['saveInterceptors.']);
 		if (strlen($output) > 0) {
 			return $output;
 		}
+
+		$this->storeGPinSession();
+		$this->mergeGPWithSession(FALSE, $this->currentStep);
 
 		//run loggers
 		$this->addFormhandlerClass($this->settings['loggers.'], 'Logger_DB');
@@ -446,35 +413,37 @@ class Tx_Formhandler_Controller_Form extends Tx_Formhandler_AbstractController {
 			ksort($this->settings['finishers.']);
 
 			//if storeGP is set include Finisher_storeGP, stores GET / POST in the session
-			if ($this->utilityFuncs->pi_getFFvalue($this->cObj->data['pi_flexform'], 'store_gp', 'sMISC')){
+			if (Tx_Formhandler_StaticFuncs::pi_getFFvalue($this->cObj->data['pi_flexform'], 'store_gp', 'sMISC')){
 				$this->addFormhandlerClass($this->settings['finishers.'], 'Finisher_StoreGP');
 			}
 
 			foreach ($this->settings['finishers.'] as $idx => $tsConfig) {
-				if ($idx !== 'disabled') {
-					if (is_array($tsConfig) && isset($tsConfig['class']) && !empty($tsConfig['class'])) {
-						if (intval($tsConfig['disable']) !== 1) {
-							$className = $this->utilityFuncs->prepareClassName($tsConfig['class']);
-							$finisher = $this->componentManager->getComponent($className);
-							$tsConfig['config.'] = $this->addDefaultComponentConfig($tsConfig['config.']);
-							$finisher->init($this->gp, $tsConfig['config.']);
-							$finisher->validateConfig();
+				if (is_array($tsConfig) && isset($tsConfig['class']) && !empty($tsConfig['class'])) {
+					if (intval($tsConfig['disable']) !== 1) {
+						$className = Tx_Formhandler_StaticFuncs::prepareClassName($tsConfig['class']);
+						$finisher = $this->componentManager->getComponent($className);
 
-							//if the finisher returns HTML (e.g. Tx_Formhandler_Finisher_SubmittedOK)
-							if ($tsConfig['config.']['returns']) {
-								$this->globals->getSession()->set('finished', TRUE);
-								return $finisher->process();
-							} else {
-								$this->gp = $finisher->process();
-								$this->globals->setGP($this->gp);
-							}
+						$tsConfig['config.'] = $this->addDefaultComponentConfig($tsConfig['config.']);
+
+						$finisher->init($this->gp, $tsConfig['config.']);
+						$finisher->validateConfig();
+						$this->storeGPinSession();
+						$this->mergeGPWithSession(FALSE, $this->currentStep);
+
+						//if the finisher returns HTML (e.g. Tx_Formhandler_Finisher_SubmittedOK)
+						if ($tsConfig['config.']['returns']) {
+							Tx_Formhandler_Globals::$session->set('finished', TRUE);
+							return $finisher->process();
+						} else {
+							$this->gp = $finisher->process();
+							Tx_Formhandler_Globals::$gp = $this->gp;
 						}
-					} else {
-						$this->utilityFuncs->throwException('classesarray_error');
 					}
+				} else {
+					Tx_Formhandler_StaticFuncs::throwException('classesarray_error');
 				}
 			}
-			$this->globals->getSession()->set('finished', TRUE);
+			Tx_Formhandler_Globals::$session->set('finished', TRUE);
 		}
 	}
 
@@ -485,10 +454,10 @@ class Tx_Formhandler_Controller_Form extends Tx_Formhandler_AbstractController {
 		$this->view->setSettings($this->settings);
 		
 		//read template file
-		$this->templateFile = $this->utilityFuncs->readTemplateFile($this->templateFile, $this->settings);
-		$this->globals->setTemplateCode($this->templateFile);
-		$this->langFiles = $this->utilityFuncs->readLanguageFiles($this->langFiles, $this->settings);
-		$this->globals->setLangFiles($this->langFiles);
+		$this->templateFile = Tx_Formhandler_StaticFuncs::readTemplateFile($this->templateFile, $this->settings);
+		Tx_Formhandler_Globals::$templateCode = $this->templateFile;
+		$this->langFiles = Tx_Formhandler_StaticFuncs::readLanguageFiles($this->langFiles, $this->settings);
+		Tx_Formhandler_Globals::$langFiles = $this->langFiles;
 		
 		$this->view->setLangFiles($this->langFiles);
 		$this->setViewSubpart($this->currentStep);
@@ -500,7 +469,6 @@ class Tx_Formhandler_Controller_Form extends Tx_Formhandler_AbstractController {
 		}
 
 		//run init interceptors
-		$this->addFormhandlerClass($this->settings['initInterceptors.'], 'Interceptor_FormProtection');
 		$this->addFormhandlerClass($this->settings['initInterceptors.'], 'Interceptor_Filtreatment');
 		$output = $this->runClasses($this->settings['initInterceptors.']);
 		if (strlen($output) > 0) {
@@ -515,7 +483,7 @@ class Tx_Formhandler_Controller_Form extends Tx_Formhandler_AbstractController {
 	protected function storeFileNamesInGP() {
 
 		//put file names into $this->gp
-		$sessionFiles = $this->globals->getSession()->get('files');
+		$sessionFiles = Tx_Formhandler_Globals::$session->get('files');
 		if (!is_array($sessionFiles)) {
 			$sessionFiles = array();
 		}
@@ -575,7 +543,7 @@ class Tx_Formhandler_Controller_Form extends Tx_Formhandler_AbstractController {
 		if ($this->gp['removeFile']) {
 			$filename = $this->gp['removeFile'];
 			$fieldname = $this->gp['removeFileField'];
-			$sessionFiles = $this->globals->getSession()->get('files');
+			$sessionFiles = Tx_Formhandler_Globals::$session->get('files');
 			if (is_array($sessionFiles)) {
 				foreach ($sessionFiles as $field => $files) {
 					if (!strcmp($field, $fieldname)) {
@@ -598,7 +566,7 @@ class Tx_Formhandler_Controller_Form extends Tx_Formhandler_AbstractController {
 			}
 			unset($this->gp['removeFile']);
 			unset($this->gp['removeFileField']);
-			$this->globals->getSession()->set('files', $sessionFiles);
+			Tx_Formhandler_Globals::$session->set('files', $sessionFiles);
 		}
 	}
 
@@ -611,20 +579,20 @@ class Tx_Formhandler_Controller_Form extends Tx_Formhandler_AbstractController {
 	 * @author	Reinhard Führicht <rf@typoheads.at>
 	 */
 	protected function processFiles() {
-		$sessionFiles = $this->globals->getSession()->get('files');
+		$sessionFiles = Tx_Formhandler_Globals::$session->get('files');
 		$tempFiles = $sessionFiles;
 
 		//if files were uploaded
 		if (isset($_FILES) && is_array($_FILES) && !empty($_FILES)) {
 
 			//get upload folder
-			$uploadFolder = $this->utilityFuncs->getTempUploadFolder();
+			$uploadFolder = Tx_Formhandler_StaticFuncs::getTempUploadFolder();
 
 			//build absolute path to upload folder
-			$uploadPath = $this->utilityFuncs->getTYPO3Root() . $uploadFolder;
+			$uploadPath = Tx_Formhandler_StaticFuncs::getTYPO3Root() . $uploadFolder;
 
 			if (!file_exists($uploadPath)) {
-				$this->utilityFuncs->debugMessage('folder_doesnt_exist', array($uploadPath), 3);
+				Tx_Formhandler_StaticFuncs::debugMessage('folder_doesnt_exist', array($uploadPath), 3);
 				return;
 			}
 
@@ -650,19 +618,7 @@ class Tx_Formhandler_Controller_Form extends Tx_Formhandler_AbstractController {
 								if (strlen($filename) > 0) {
 									$ext = substr($name, strpos($name, '.'));
 									$suffix = 1;
-
-									//Default: Replace spaces with underscores
-									$search = array(' ', '%20');
-									$replace = array('_');
-
-									//The settings "search" and "replace" are comma separated lists
-									if($this->settings['files.']['search']) {
-										$search = t3lib_div::trimExplode(',', $this->settings['files.']['search']);
-									}
-									if($this->settings['files.']['replace']) {
-										$replace = t3lib_div::trimExplode(',', $this->settings['files.']['replace']);
-									}
-									$filename = str_replace($search, $replace, $filename);
+									$filename = str_replace(' ', '_', $filename);
 
 									//build file name
 									$uploadedFileName = $filename . $ext;
@@ -705,8 +661,8 @@ class Tx_Formhandler_Controller_Form extends Tx_Formhandler_AbstractController {
 			}
 		}
 
-		$this->globals->getSession()->set('files', $tempFiles);
-		$this->utilityFuncs->debugMessage('Files:', array(), 1, (array)$tempFiles);
+		Tx_Formhandler_Globals::$session->set('files', $tempFiles);
+		Tx_Formhandler_StaticFuncs::debugMessage('Files:', array(), 1, (array)$tempFiles);
 	}
 
 	/**
@@ -718,27 +674,19 @@ class Tx_Formhandler_Controller_Form extends Tx_Formhandler_AbstractController {
 	 */
 	protected function storeGPinSession() {
 
-		if ($this->currentStep > $this->lastStep) {
-			$this->loadSettingsForStep($this->lastStep);
-		}
-		$newGP = $this->handleCheckBoxFields();
-		if ($this->currentStep > $this->lastStep) {
-			$this->loadSettingsForStep($this->currentStep);
-		}
-		$data = $this->globals->getSession()->get('values');
+		$newGP = Tx_Formhandler_StaticFuncs::getMergedGP();
+		$data = Tx_Formhandler_Globals::$session->get('values');
 
 		//set the variables in session
 		if ($this->lastStep !== $this->currentStep) {
 			foreach ($newGP as $key => $value) {
-				if (!strstr($key, 'step-') && $key !== 'submitted' && $key !== 'randomID' && 
-					$key !== 'removeFile' && $key !== 'removeFileField' && $key !== 'submitField') {
-
+				if (!strstr($key, 'step-') && $key !== 'submitted' && $key !== 'randomID') {
 					$data[$this->lastStep][$key] = $this->gp[$key];
 				}
 			}
 		}
 
-		$this->globals->getSession()->set('values', $data);
+		Tx_Formhandler_Globals::$session->set('values', $data);
 	}
 
 	protected function reset() {
@@ -754,11 +702,11 @@ class Tx_Formhandler_Controller_Form extends Tx_Formhandler_AbstractController {
 			'key_hash' => NULL,
 			'finished' => NULL
 		);
-		$this->globals->getSession()->setMultiple($values);
+		Tx_Formhandler_Globals::$session->setMultiple($values);
 		$this->gp = array();
 		$this->currentStep = 1;
-		$this->globals->setGP($this->gp);
-		$this->utilityFuncs->debugMessage('cleared_session');
+		Tx_Formhandler_Globals::$gp = $this->gp;
+		Tx_Formhandler_StaticFuncs::debugMessage('cleared_session');
 	}
 
 	/**
@@ -785,15 +733,15 @@ class Tx_Formhandler_Controller_Form extends Tx_Formhandler_AbstractController {
 
 		switch ($action) {
 			case 'next':
-				if ($step !== intval($this->globals->getSession()->get('currentStep'))) {
-					$this->currentStep = intval($this->globals->getSession()->get('currentStep')) + 1;
+				if ($step !== intval(Tx_Formhandler_Globals::$session->get('currentStep'))) {
+					$this->currentStep = intval(Tx_Formhandler_Globals::$session->get('currentStep')) + 1;
 				} else {
 					$this->currentStep = $step;
 				}
 				break;
 			case 'prev':
-				if ($step !== intval($this->globals->getSession()->get('currentStep'))) {
-					$this->currentStep = intval($this->globals->getSession()->get('currentStep')) - 1;
+				if ($step !== intval(Tx_Formhandler_Globals::$session->get('currentStep'))) {
+					$this->currentStep = intval(Tx_Formhandler_Globals::$session->get('currentStep')) - 1;
 				} else {
 					$this->currentStep = $step;
 				}
@@ -802,13 +750,13 @@ class Tx_Formhandler_Controller_Form extends Tx_Formhandler_AbstractController {
 				}
 				break;
 			default:
-				$this->currentStep = intval($this->globals->getSession()->get('currentStep'));
+				$this->currentStep = intval(Tx_Formhandler_Globals::$session->get('currentStep'));
 				break;
 		}
 		if (!$this->currentStep) {
 			$this->currentStep = 1;
 		}
-		$this->utilityFuncs->debugMessage('current_step', array($this->currentStep));
+		Tx_Formhandler_StaticFuncs::debugMessage('current_step', array($this->currentStep));
 	}
 
 	public function validateConfig() {
@@ -823,7 +771,7 @@ class Tx_Formhandler_Controller_Form extends Tx_Formhandler_AbstractController {
 			$flexformSection = $option[1];
 			$component = $option[2];
 			$componentName = $option[3];
-			$value = $this->utilityFuncs->pi_getFFvalue($this->cObj->data['pi_flexform'], $fieldName, $flexformSection);
+			$value = Tx_Formhandler_StaticFuncs::pi_getFFvalue($this->cObj->data['pi_flexform'], $fieldName, $flexformSection);
 
 			// Check if a Mail Finisher can be found in the config
 			$isConfigOk = FALSE;
@@ -845,7 +793,7 @@ class Tx_Formhandler_Controller_Form extends Tx_Formhandler_AbstractController {
 
 			// Throws an Exception if a problem occurs
 			if ($value != '' && !$isConfigOk) {
-				$this->utilityFuncs->throwException('missing_component', $component, $value, $componentName);
+				Tx_Formhandler_StaticFuncs::throwException('missing_component', $component, $value, $componentName);
 			}
 		}
 	}
@@ -859,18 +807,18 @@ class Tx_Formhandler_Controller_Form extends Tx_Formhandler_AbstractController {
 			foreach ($conditions as $subIdx => $andConditions) {
 				$results = array();
 				foreach ($andConditions as $subSubIdx => $andCondition) {
-					if (strstr($andCondition, '!=')) {
-						list($field, $value) = t3lib_div::trimExplode('!=', $andCondition);
-						$result = ($this->globals->getCObj()->getGlobal($field, $this->gp) !== $value);
-					} elseif (strstr($andCondition, '=')) {
+					if (strstr($andCondition, '=')) {
 						list($field, $value) = t3lib_div::trimExplode('=', $andCondition);
-						$result = ($this->globals->getCObj()->getGlobal($field, $this->gp) === $value);
+						$result = (Tx_Formhandler_Globals::$cObj->getGlobal($field, $this->gp) === $value);
 					} elseif (strstr($andCondition, '>')) {
 						list($field, $value) = t3lib_div::trimExplode('>', $andCondition);
-						$result = ($this->globals->getCObj()->getGlobal($field, $this->gp) > $value);
+						$result = (Tx_Formhandler_Globals::$cObj->getGlobal($field, $this->gp) > $value);
 					} elseif (strstr($andCondition, '<')) {
 						list($field, $value) = t3lib_div::trimExplode('<', $andCondition);
-						$result = ($this->globals->getCObj()->getGlobal($field, $this->gp) < $value);
+						$result = (Tx_Formhandler_Globals::$cObj->getGlobal($field, $this->gp) < $value);
+					} elseif (strstr($andCondition, '!=')) {
+						list($field, $value) = t3lib_div::trimExplode('!=', $andCondition);
+						$result = (Tx_Formhandler_Globals::$cObj->getGlobal($field, $this->gp) !== $value);
 					} else {
 						$field = $andCondition;
 						$keys = explode('|', $field);
@@ -924,7 +872,7 @@ class Tx_Formhandler_Controller_Form extends Tx_Formhandler_AbstractController {
 		}
 
 		//parse conditions for each of the previous steps
-		$endStep = $this->globals->getSession()->get('currentStep');
+		$endStep = Tx_Formhandler_Globals::$session->get('currentStep');
 		$step = 1;
 
 		while($step <= $endStep) {
@@ -939,38 +887,38 @@ class Tx_Formhandler_Controller_Form extends Tx_Formhandler_AbstractController {
 	protected function init() {
 
 		$this->settings = $this->getSettings();
-		$this->formValuesPrefix = $this->utilityFuncs->getSingle($this->settings, 'formValuesPrefix');
-		$this->globals->setFormID($this->utilityFuncs->getSingle($this->settings, 'formID'));
-		$this->globals->setFormValuesPrefix($this->formValuesPrefix);
+		$this->formValuesPrefix = Tx_Formhandler_StaticFuncs::getSingle($this->settings, 'formValuesPrefix');
+		Tx_Formhandler_Globals::$formID = Tx_Formhandler_StaticFuncs::getSingle($this->settings, 'formID');
+		Tx_Formhandler_Globals::$formValuesPrefix = $this->formValuesPrefix;
 
 		//set debug mode
-		$isDebugMode = $this->utilityFuncs->getSingle($this->settings, 'debug');
+		$isDebugMode = Tx_Formhandler_StaticFuncs::getSingle($this->settings, 'debug');
 		$this->debugMode = (intval($isDebugMode) === 1);
 
 		$sessionClass = 'Tx_Formhandler_Session_PHP';
 		if($this->settings['session.']) {
-			$sessionClass = $this->utilityFuncs->prepareClassName($this->settings['session.']['class']);
+			$sessionClass = Tx_Formhandler_StaticFuncs::prepareClassName($this->settings['session.']['class']);
 		}
 
-		$this->globals->setSession($this->componentManager->getComponent($sessionClass));
-		$this->gp = $this->utilityFuncs->getMergedGP();
+		Tx_Formhandler_Globals::$session = $this->componentManager->getComponent($sessionClass);
+		$this->gp = Tx_Formhandler_Staticfuncs::getMergedGP();
 
 		$randomID = $this->gp['randomID'];
 		if (!$randomID) {
-			$randomID = $this->utilityFuncs->generateRandomID();
+			$randomID = Tx_Formhandler_StaticFuncs::generateRandomID();
 		}
-		$this->globals->setRandomID($randomID);
+		Tx_Formhandler_Globals::$randomID = $randomID;
 		
 		$action = t3lib_div::_GP('action');
-		if ($this->globals->getFormValuesPrefix()) {
-			$temp = t3lib_div::_GP($this->globals->getFormValuesPrefix());
+		if (Tx_Formhandler_Globals::$formValuesPrefix) {
+			$temp = t3lib_div::_GP(Tx_Formhandler_Globals::$formValuesPrefix);
 			$action = $temp['action'];
 		}
-		if($this->globals->getSession()->get('finished') && !$action) {
-			$this->globals->getSession()->reset();
-			unset($_GET[$this->globals->getFormValuesPrefix()]);
+		if(Tx_Formhandler_Globals::$session->get('finished') && !$action) {
+			Tx_Formhandler_Globals::$session->reset();
+			unset($_GET[Tx_Formhandler_Globals::$formValuesPrefix]);
 			unset($_GET['id']);
-			$this->utilityFuncs->doRedirect($GLOBALS['TSFE']->id, FALSE, $_GET);
+			Tx_Formhandler_StaticFuncs::doRedirect($GLOBALS['TSFE']->id, FALSE, $_GET);
 			exit();
 		}
 		$this->parseConditions();
@@ -979,28 +927,32 @@ class Tx_Formhandler_Controller_Form extends Tx_Formhandler_AbstractController {
 
 		$this->getStepInformation();
 
-		$currentStepFromSession = $this->globals->getSession()->get('currentStep');
+		$currentStepFromSession = Tx_Formhandler_Globals::$session->get('currentStep');
 		$prevStep = $currentStepFromSession;
 		if (intval($prevStep) !== intval($currentStepFromSession)) {
 			$this->currentStep = 1;
 			$this->lastStep = 1;
-			$this->utilityFuncs->throwException('You messed with the steps!');
+			Tx_Formhandler_StaticFuncs::throwException('You messed with the steps!');
 		}
 
-		$this->mergeGPWithSession();
+		$this->mergeGPWithSession(FALSE, $this->currentStep);
 
 		$this->parseConditions();
 
-		if(intval($this->utilityFuncs->getSingle($this->settings, 'disableConfigValidation')) === 0) {
-			$this->validateConfig();
-		}
-		$this->globals->setSettings($this->settings);
+		//read template file
+		$this->templateFile = Tx_Formhandler_StaticFuncs::readTemplateFile($this->templateFile, $this->settings);
+		Tx_Formhandler_Globals::$templateCode = $this->templateFile;
+		$this->langFiles = Tx_Formhandler_StaticFuncs::readLanguageFiles($this->langFiles, $this->settings);
+		Tx_Formhandler_Globals::$langFiles = $this->langFiles;
+
+		$this->validateConfig();
+		Tx_Formhandler_Globals::$settings = $this->settings;
 
 		//set debug mode again cause it may have changed in specific step settings
 		$this->debugMode = (intval($this->settings['debug']) === 1);
-		$this->globals->getSession()->set('debug', $this->debugMode);
+		Tx_Formhandler_Globals::$session->set('debug', $this->debugMode);
 
-		$this->utilityFuncs->debugMessage('using_prefix', array($this->formValuesPrefix));
+		Tx_Formhandler_StaticFuncs::debugMessage('using_prefix', array($this->formValuesPrefix));
 
 		//init view
 		$viewClass = $this->settings['view'];
@@ -1008,17 +960,16 @@ class Tx_Formhandler_Controller_Form extends Tx_Formhandler_AbstractController {
 			$viewClass = 'Tx_Formhandler_View_Form';
 		}
 		
-		$this->utilityFuncs->debugMessage('using_view', array($viewClass));
-		$this->utilityFuncs->debugMessage('current_gp', array(), 1, $this->gp);
+		Tx_Formhandler_StaticFuncs::debugMessage('using_view', array($viewClass));
+		Tx_Formhandler_StaticFuncs::debugMessage('current_gp', array(), 1, $this->gp);
 
 		$this->storeSettingsInSession();
 
-		$this->mergeGPWithSession();
+		$this->mergeGPWithSession(FALSE, $this->currentStep);
 
 		//set submitted
 		$this->submitted = $this->isFormSubmitted();
 
-		$this->globals->setSubmitted($this->submitted);
 		if (!$this->submitted) {
 			$this->reset();
 		}
@@ -1029,14 +980,14 @@ class Tx_Formhandler_Controller_Form extends Tx_Formhandler_AbstractController {
 		// add JavaScript file(s)
 		$this->addJS();
 
-		$this->utilityFuncs->debugMessage('current_session_params', array(), 1, (array)$this->globals->getSession()->get('values'));
+		Tx_Formhandler_StaticFuncs::debugMessage('current_session_params', array(), 1, (array)Tx_Formhandler_Globals::$session->get('values'));
 
-		$viewClass = $this->utilityFuncs->prepareClassName($viewClass);
+		$viewClass = Tx_Formhandler_StaticFuncs::prepareClassName($viewClass);
 		$this->view = $this->componentManager->getComponent($viewClass);
 		$this->view->setLangFiles($this->langFiles);
 		$this->view->setSettings($this->settings);
 
-		$this->globals->setGP($this->gp);
+		Tx_Formhandler_Globals::$gp = $this->gp;
 
 		//init ajax
 		if ($this->settings['ajax.']) {
@@ -1044,16 +995,16 @@ class Tx_Formhandler_Controller_Form extends Tx_Formhandler_AbstractController {
 			if (!$class) {
 				$class = 'Tx_Formhandler_AjaxHandler_JQuery';
 			}
-			$this->utilityFuncs->debugMessage('using_ajax', array($class));
-			$class = $this->utilityFuncs->prepareClassName($class);
+			Tx_Formhandler_StaticFuncs::debugMessage('using_ajax', array($class));
+			$class = Tx_Formhandler_StaticFuncs::prepareClassName($class);
 			$ajaxHandler = $this->componentManager->getComponent($class);
-			$this->globals->setAjaxHandler($ajaxHandler);
+			Tx_Formhandler_Globals::$ajaxHandler = $ajaxHandler;
 
 			$ajaxHandler->init($this->settings['ajax.']['config.']);
 			$ajaxHandler->initAjax();
 		}
 		if (!$this->gp['randomID']) {
-			$this->gp['randomID'] = $this->globals->getRandomID();
+			$this->gp['randomID'] = Tx_Formhandler_Globals::$randomID;
 		}
 	}
 
@@ -1086,15 +1037,15 @@ class Tx_Formhandler_Controller_Form extends Tx_Formhandler_AbstractController {
 		} elseif (strstr($this->templateFile, ('###TEMPLATE_FORM' . $step . $this->settings['templateSuffix'] . '###'))) {
 			
 			// search for ###TEMPLATE_FORM[step][suffix]###
-			$this->utilityFuncs->debugMessage('using_subpart', array('###TEMPLATE_FORM' . $step . $this->settings['templateSuffix'] . '###'));
+			Tx_Formhandler_StaticFuncs::debugMessage('using_subpart', array('###TEMPLATE_FORM' . $step . $this->settings['templateSuffix'] . '###'));
 			$this->view->setTemplate($this->templateFile, ('FORM' . $step . $this->settings['templateSuffix']));
 		} elseif (!isset($this->settings['templateSuffix']) && strstr($this->templateFile, ('###TEMPLATE_FORM' . $step . '###'))) {
 			
 			//search for ###TEMPLATE_FORM[step]###
-			$this->utilityFuncs->debugMessage('using_subpart', array('###TEMPLATE_FORM' . $step . '###'));
+			Tx_Formhandler_StaticFuncs::debugMessage('using_subpart', array('###TEMPLATE_FORM' . $step . '###'));
 			$this->view->setTemplate($this->templateFile, ('FORM' . $step));
 
-		} elseif (intval($step) === intval($this->globals->getSession()->get('lastStep')) + 1) {
+		} elseif (intval($step) === intval(Tx_Formhandler_Globals::$session->get('lastStep')) + 1) {
 			$this->finished = TRUE;
 		}
 	}
@@ -1109,10 +1060,10 @@ class Tx_Formhandler_Controller_Form extends Tx_Formhandler_AbstractController {
 			'lastStep' => $this->lastStep,
 			'templateSuffix' => $this->settings['templateSuffix']
 		);
-		$this->globals->getSession()->setMultiple($values);
+		Tx_Formhandler_Globals::$session->setMultiple($values);
 		
-		$this->globals->setFormValuesPrefix($this->formValuesPrefix);
-		$this->globals->setTemplateSuffix($this->settings['templateSuffix']);
+		Tx_Formhandler_Globals::$formValuesPrefix = $this->formValuesPrefix;
+		Tx_Formhandler_Globals::$templateSuffix = $this->settings['templateSuffix'];
 	}
 
 	protected function loadSettingsForStep($step) {
@@ -1120,7 +1071,7 @@ class Tx_Formhandler_Controller_Form extends Tx_Formhandler_AbstractController {
 		if (isset($this->settings[$step . '.']) && is_array($this->settings[$step . '.'])) {
 			$this->settings = array_merge($this->settings, $this->settings[$step . '.']);
 		}
-		$this->globals->getSession()->set('settings', $this->settings);
+		Tx_Formhandler_Globals::$session->set('settings', $this->settings);
 	}
 
 	protected function getStepInformation() {
@@ -1129,13 +1080,12 @@ class Tx_Formhandler_Controller_Form extends Tx_Formhandler_AbstractController {
 		$this->findCurrentStep();
 
 		//set last step
-		$this->lastStep = $this->globals->getSession()->get('currentStep');
+		$this->lastStep = Tx_Formhandler_Globals::$session->get('currentStep');
 		if (!$this->lastStep) {
 			$this->lastStep = 1;
 		}
 
 		//total steps
-		$this->templateFile = $this->utilityFuncs->readTemplateFile($this->templateFile, $this->settings);
 		preg_match_all('/(###TEMPLATE_FORM)([0-9]+)(_.*)?(###)/', $this->templateFile, $subparts);
 
 		//get step numbers
@@ -1144,9 +1094,9 @@ class Tx_Formhandler_Controller_Form extends Tx_Formhandler_AbstractController {
 		$countSubparts = count($subparts);
 		$this->totalSteps = $subparts[$countSubparts - 1];
 		if ($this->totalSteps > $countSubparts) {
-			$this->utilityFuncs->debugMessage('subparts_missing', array(implode(', ', $subparts)), 2);
+			Tx_Formhandler_StaticFuncs::debugMessage('subparts_missing', array(implode(', ', $subparts)), 2);
 		} else {
-			$this->utilityFuncs->debugMessage('total_steps', array($this->totalSteps));
+			Tx_Formhandler_StaticFuncs::debugMessage('total_steps', array($this->totalSteps));
 		}
 	}
 
@@ -1156,22 +1106,20 @@ class Tx_Formhandler_Controller_Form extends Tx_Formhandler_AbstractController {
 	 * @return void
 	 * @author	Reinhard Führicht <rf@typoheads.at>
 	 */
-	protected function mergeGPWithSession() {
+	protected function mergeGPWithSession($overruleGP = TRUE, $maxStep = 0) {
 		if (!is_array($this->gp)) {
 			$this->gp = array();
 		}
-		$values = $this->globals->getSession()->get('values');
+		$values = Tx_Formhandler_Globals::$session->get('values');
 		if (!is_array($values)) {
 			$values = array();
 		}
-
-		$maxStep = $this->currentStep;
 
 		foreach ($values as $step => &$params) {
 			if (is_array($params) && (!$maxStep || $step <= $maxStep)) {
 				unset($params['submitted']);
 				foreach ($params as $key => $value) {
-					if (!isset($this->gp[$key])) {
+					if ($overruleGP || !isset($this->gp[$key])) {
 						$this->gp[$key] = $value;
 					}
 				}
@@ -1191,30 +1139,28 @@ class Tx_Formhandler_Controller_Form extends Tx_Formhandler_AbstractController {
 		if (isset($classesArray) && is_array($classesArray) && intval($classesArray['disable']) !== 1) {
 
 			foreach ($classesArray as $idx => $tsConfig) {
-				if ($idx !== 'disable') {
-					if (is_array($tsConfig) && isset($tsConfig['class']) && !empty($tsConfig['class'])) {
-						if (intval($tsConfig['disable']) !== 1) {
-							$className = $this->utilityFuncs->prepareClassName($tsConfig['class']);
-							$this->utilityFuncs->debugMessage('calling_class', array($className));
-							$obj = $this->componentManager->getComponent($className);
-							$tsConfig['config.'] = $this->addDefaultComponentConfig($tsConfig['config.']);
-							$obj->init($this->gp, $tsConfig['config.']);
-							$obj->validateConfig();
-							$return = $obj->process();
-							if (is_array($return)) {
+				if (is_array($tsConfig) && isset($tsConfig['class']) && !empty($tsConfig['class'])) {
+					if (intval($tsConfig['disable']) !== 1) {
+						$className = Tx_Formhandler_StaticFuncs::prepareClassName($tsConfig['class']);
+						Tx_Formhandler_StaticFuncs::debugMessage('calling_class', array($className));
+						$obj = $this->componentManager->getComponent($className);
+						$tsConfig['config.'] = $this->addDefaultComponentConfig($tsConfig['config.']);
+						$obj->init($this->gp, $tsConfig['config.']);
+						$obj->validateConfig();
+						$return = $obj->process();
+						if (is_array($return)) {
 
-								//return value is an array. Treat it as the probably modified get/post parameters
-								$this->gp = $return;
-								$this->globals->setGP($this->gp);
-							} else {
+							//return value is an array. Treat it as the probably modified get/post parameters
+							$this->gp = $return;
+							Tx_Formhandler_Globals::$gp = $this->gp;
+						} else {
 
-								//return value is no array. treat this return value as output.
-								return $return;
-							}
+							//return value is no array. treat this return value as output.
+							return $return;
 						}
-					} else {
-						$this->utilityFuncs->throwException('classesarray_error');
 					}
+				} else {
+					Tx_Formhandler_StaticFuncs::throwException('classesarray_error');
 				}
 			}
 		}
@@ -1232,18 +1178,18 @@ class Tx_Formhandler_Controller_Form extends Tx_Formhandler_AbstractController {
 		if ($this->settings['cssFile.']) {
 			foreach ($this->settings['cssFile.'] as $idx => $file) {
 				if(strpos($idx, '.') === FALSE) {
-					$file = $this->utilityFuncs->getSingle($this->settings['cssFile.'], $idx);
+					$file = Tx_Formhandler_StaticFuncs::getSingle($this->settings['cssFile.'], $idx);
 					$cssFiles[] = $file;
 				}
 			}
 		} elseif (strlen($stylesheetFile) > 0) {
-			$cssFiles[] = $this->utilityFuncs->getSingle($this->settings, 'cssFile');
+			$cssFiles[] = Tx_Formhandler_StaticFuncs::getSingle($this->settings, 'cssFile');
 		}
 		foreach ($cssFiles as $idx => $file) {
 
 				// set stylesheet
 				$GLOBALS['TSFE']->additionalHeaderData[$this->configuration->getPackageKeyLowercase()] .=
-					'<link rel="stylesheet" href="' . $this->utilityFuncs->resolveRelPathFromSiteRoot($file) . '" type="text/css" media="screen" />' . "\n";
+					'<link rel="stylesheet" href="' . Tx_Formhandler_StaticFuncs::resolveRelPathFromSiteRoot($file) . '" type="text/css" media="screen" />' . "\n";
 		}
 	}
 
@@ -1259,18 +1205,18 @@ class Tx_Formhandler_Controller_Form extends Tx_Formhandler_AbstractController {
 		if ($this->settings['jsFile.']) {
 			foreach ($this->settings['jsFile.'] as $idx => $file) {
 				if(strpos($idx, '.') === FALSE) {
-					$file = $this->utilityFuncs->getSingle($this->settings['jsFile.'], $idx);
+					$file = Tx_Formhandler_StaticFuncs::getSingle($this->settings['jsFile.'], $idx);
 					$jsFiles[] = $file;
 				}
 			}
 		} elseif (strlen($jsFile) > 0) {
-			$jsFiles[] = $this->utilityFuncs->getSingle($this->settings, 'jsFile');;
+			$jsFiles[] = Tx_Formhandler_StaticFuncs::getSingle($this->settings, 'jsFile');;
 		}
 		foreach ($jsFiles as $idx => $file) {
 
 			// set stylesheet
 			$GLOBALS['TSFE']->additionalHeaderData[$this->configuration->getPackageKeyLowercase()] .=
-				'<script type="text/javascript" src="' . $this->utilityFuncs->resolveRelPathFromSiteRoot($file) . '"></script>' . "\n";
+				'<script type="text/javascript" src="' . Tx_Formhandler_StaticFuncs::resolveRelPathFromSiteRoot($file) . '"></script>' . "\n";
 		}
 	}
 
@@ -1295,26 +1241,19 @@ class Tx_Formhandler_Controller_Form extends Tx_Formhandler_AbstractController {
 	
 	protected function handleCheckBoxFields() {
 		
-		$newGP = $this->utilityFuncs->getMergedGP();
+		$newGP = Tx_Formhandler_StaticFuncs::getMergedGP();
 		
 		//check for checkbox fields using the values in $newGP
 		if ($this->settings['checkBoxFields']) {
 			$fields = t3lib_div::trimExplode(',', $this->settings['checkBoxFields']);
 			foreach ($fields as $idx => $field) {
-				if (!isset($newGP[$field]) && isset($this->gp[$field]) && $this->lastStep < $this->currentStep) {
-					$this->gp[$field] = $newGP[$field] = array();
-
-				//Insert default checkbox values
-				} elseif(!isset($newGP[$field]) && $this->lastStep < $this->currentStep) {
-					if(is_array($this->settings['checkBoxUncheckedValue.']) && isset($this->settings['checkBoxUncheckedValue.'][$field])) {
-						$this->gp[$field] = $newGP[$field] = $this->settings['checkBoxUncheckedValue.'][$field];
-					} elseif(isset($this->settings['checkBoxUncheckedValue'])) {
-						$this->gp[$field] = $newGP[$field] = $this->settings['checkBoxUncheckedValue'];
+				if (!isset($newGP[$field]) && isset($this->gp[$field])) {
+					if($this->lastStep < $this->currentStep) {
+						$this->gp[$field] = array();
 					}
 				}
 			}
 		}
-		return $newGP;
 	}
 
 	protected function initializeDebuggers() {
@@ -1323,13 +1262,23 @@ class Tx_Formhandler_Controller_Form extends Tx_Formhandler_AbstractController {
 		foreach ($this->settings['debuggers.'] as $idx => $options) {
 			if(intval($options['disable']) !== 1) {
 				$debuggerClass = $options['class'];
-				$debuggerClass = $this->utilityFuncs->prepareClassName($debuggerClass);
+				$debuggerClass = Tx_Formhandler_StaticFuncs::prepareClassName($debuggerClass);
 				$debugger = $this->componentManager->getComponent($debuggerClass);
 				$debugger->init($this->gp, $options['config.']);
 				$debugger->validateConfig();
-				$this->globals->addDebugger($debugger);
+				Tx_Formhandler_Globals::$debuggers[] = $debugger;
 			}
 		}
+	}
+
+	/**
+	 * Possibly unnecessary
+	 *
+	 * @return void
+	 * @author	Reinhard Führicht <rf@typoheads.at>
+	 */
+	protected function initializeController($value = '') {
+
 	}
 
 }

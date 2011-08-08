@@ -15,32 +15,34 @@
  *                                                                        */
 
 /**
- * Validates that a specified field is a valid integer.
+ * A class providing messages for exceptions and debugging
  *
  * @author	Reinhard Führicht <rf@typoheads.at>
  * @package	Tx_Formhandler
- * @subpackage	ErrorChecks
+ * @subpackage	Utils
  */
-class Tx_Formhandler_ErrorCheck_Integer extends Tx_Formhandler_AbstractErrorCheck {
+class Tx_Formhandler_Messages {
 
 	/**
-	 * Validates that a specified field is a valid integer.
+	 * Returns a debug message according to given key
 	 *
-	 * @param array &$check The TypoScript settings for this error check
-	 * @param string $name The field name
-	 * @param array &$gp The current GET/POST parameters
-	 * @return string The error string
+	 * @param string The key in translation file
+	 * @return string
 	 */
-	public function check(&$check, $name, &$gp) {
-		$checkFailed = '';
-		if (isset($gp[$name]) && strlen(trim($gp[$name])) > 0) {
-			$valid = preg_match('/^-{0,1}[0-9]+$/', $gp[$name]);
-			if (!$valid) {
-				$checkFailed = $this->getCheckFailed($check);
-			}
-		}
-		return $checkFailed;
+	public static function getDebugMessage($key) {
+		return trim($GLOBALS['TSFE']->sL('LLL:EXT:formhandler/Resources/Language/locallang_debug.xml:' . $key));
+	}
+
+	/**
+	 * Returns an exception message according to given key
+	 *
+	 * @param string The key in translation file
+	 * @return string
+	 */
+	public static function getExceptionMessage($key) {
+		return trim($GLOBALS['TSFE']->sL('LLL:EXT:formhandler/Resources/Language/locallang_exceptions.xml:' . $key));
 	}
 
 }
+
 ?>

@@ -59,18 +59,6 @@ $TCA['tx_formhandler_log'] = array (
 			'config' => array (
 				'type' => 'none'
 			)
-		),
-		'key_hash' => array (
-			'label' => '',
-			'config' => array (
-				'type' => 'none'
-			)
-		),
-		'unique_hash' => array (
-			'label' => '',
-			'config' => array (
-				'type' => 'none'
-			)
 		)
 	),
 	'types' => array (

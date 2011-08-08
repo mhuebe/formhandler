@@ -23,21 +23,24 @@
  */
 class Tx_Formhandler_ErrorCheck_MinValue extends Tx_Formhandler_AbstractErrorCheck {
 
-	public function init($gp, $settings) {
-		parent::init($gp, $settings);
-		$this->mandatoryParameters = array('value');
-	}
-
-	public function check() {
+	/**
+	 * Validates that a specified field is an integer and greater than or equal a specified value
+	 *
+	 * @param array &$check The TypoScript settings for this error check
+	 * @param string $name The field name
+	 * @param array &$gp The current GET/POST parameters
+	 * @return string The error string
+	 */
+	public function check(&$check, $name, &$gp) {
 		$checkFailed = '';
-		$min = floatval(str_replace(',', '.', $this->utilityFuncs->getSingle($this->settings['params'], 'value')));
-		$valueToCheck = floatval(str_replace(',', '.', $this->gp[$this->formFieldName]));
-		if (isset($this->gp[$this->formFieldName]) &&
+		$min = floatval(str_replace(',', '.', Tx_Formhandler_StaticFuncs::getSingle($check['params'], 'value')));
+		$valueToCheck = floatval(str_replace(',', '.', $gp[$name]));
+		if (isset($gp[$name]) &&
 			$valueToCheck >= 0 &&
 			$min >= 0 &&
 			(!is_numeric($valueToCheck) || $valueToCheck < $min)) {
 
-			$checkFailed = $this->getCheckFailed();
+			$checkFailed = $this->getCheckFailed($check);
 		}
 		return $checkFailed;
 	}

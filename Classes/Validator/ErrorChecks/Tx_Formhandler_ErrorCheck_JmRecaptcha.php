@@ -23,14 +23,22 @@
  */
 class Tx_Formhandler_ErrorCheck_JmRecaptcha extends Tx_Formhandler_AbstractErrorCheck {
 
-	public function check() {
+	/**
+	 * Validates that a specified field's value matches the generated word of the extension "jm_recaptcha"
+	 *
+	 * @param array &$check The TypoScript settings for this error check
+	 * @param string $name The field name
+	 * @param array &$gp The current GET/POST parameters
+	 * @return string The error string
+	 */
+	public function check(&$check, $name, &$gp) {
 		$checkFailed = '';
 		if (t3lib_extMgm::isLoaded('jm_recaptcha')) {
 			require_once(t3lib_extMgm::extPath('jm_recaptcha') . 'class.tx_jmrecaptcha.php');
 			$this->recaptcha = new tx_jmrecaptcha();
 			$status = $this->recaptcha->validateReCaptcha();
 			if (!$status['verified']) {
-				$checkFailed = $this->getCheckFailed();
+				$checkFailed = $this->getCheckFailed($check);
 			}
 		}
 		return $checkFailed;

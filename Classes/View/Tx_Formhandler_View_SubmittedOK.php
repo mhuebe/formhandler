@@ -34,18 +34,24 @@ class Tx_Formhandler_View_SubmittedOK extends Tx_Formhandler_View_Form {
 	 */
 	protected function fillDefaultMarkers() {
 		parent::fillDefaultMarkers();
-		$params = array();
-		if ($this->globals->getFormValuesPrefix()) {
-			$params[$this->globals->getFormValuesPrefix()] = $this->gp;
+		if (Tx_Formhandler_Globals::$formValuesPrefix) {
+			$params[Tx_Formhandler_Globals::$formValuesPrefix] = $this->gp;
 		} else {
 			$params = $this->gp;
 		}
+		$params['type'] = 98;
+		$label = Tx_Formhandler_StaticFuncs::getTranslatedMessage($this->langFiles, 'print');
+		if (strlen($label) == 0) {
+			$label = 'print';
+		}
+		$markers['###PRINT_LINK###'] = $this->cObj->getTypolink($label, $GLOBALS['TSFE']->id, $params);
+		unset($params['type']);
 		if ($this->componentSettings['actions.']) {
 			foreach ($this->componentSettings['actions.'] as $action=>$options) {
 				$sanitizedAction = str_replace('.', '', $action);
 				$class = $options['class'];
 				if ($class) {
-					$class = $this->utilityFuncs->prepareClassName($class);
+					$class = Tx_Formhandler_StaticFuncs::prepareClassName($class);
 					$generator = $this->componentManager->getComponent($class);
 					$generator->init($this->gp, $options['config.']);
 					$markers['###' . strtoupper($sanitizedAction) . '_LINK###'] = $generator->getLink($params);

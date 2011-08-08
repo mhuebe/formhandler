@@ -111,7 +111,7 @@ class Tx_Formhandler_Controller_BackendClearLogs extends Tx_Formhandler_Abstract
 	protected function getOverview() {
 		global $LANG;
 		$existingTables = $GLOBALS['TYPO3_DB']->admin_get_tables();
-		$code = $this->utilityFuncs->getSubpart($this->templateCode, '###CLEAR_LOGS###');
+		$code = Tx_Formhandler_StaticFuncs::getSubpart($this->templateCode, '###CLEAR_LOGS###');
 		$markers = array();
 		$markers['###URL###'] = $_SERVER['PHP_SELF'];
 		$markers['###UID###'] = $this->id;
@@ -124,20 +124,20 @@ class Tx_Formhandler_Controller_BackendClearLogs extends Tx_Formhandler_Abstract
 			if (strpos($table, 'tx_formhandler_') > -1) {
 				$res = $GLOBALS['TYPO3_DB']->sql_query('SELECT COUNT(*) as rowCount FROM ' . $table);
 				if ($res) {
-					$rowCode = $this->utilityFuncs->getSubpart($this->templateCode, '###CLEAR_LOGS_TABLE###');
+					$rowCode = Tx_Formhandler_StaticFuncs::getSubpart($this->templateCode, '###CLEAR_LOGS_TABLE###');
 					$tableMarkers = array();
 					$row = $GLOBALS['TYPO3_DB']->sql_fetch_assoc($res);
 					$tableMarkers['###TABLE###'] = $table;
 					$tableMarkers['###ROW_COUNT###'] = $row['rowCount'];
 					$GLOBALS['TYPO3_DB']->sql_free_result($res);
-					$markers['###TABLES###'] .= $this->utilityFuncs->substituteMarkerArray($rowCode, $tableMarkers);
+					$markers['###TABLES###'] .= Tx_Formhandler_StaticFuncs::substituteMarkerArray($rowCode, $tableMarkers);
 				}
 				
 			}
 			
 		}
 		$markers['###LLL:clear###'] = $LANG->getLL('clear_selected_tables');
-		return $this->utilityFuncs->substituteMarkerArray($code, $markers);
+		return Tx_Formhandler_StaticFuncs::substituteMarkerArray($code, $markers);
 	}
 
 }

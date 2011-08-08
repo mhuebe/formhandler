@@ -23,14 +23,17 @@
  */
 class Tx_Formhandler_ErrorCheck_FileAllowedTypes extends Tx_Formhandler_AbstractErrorCheck {
 
-	public function init($gp, $settings) {
-		parent::init($gp, $settings);
-		$this->mandatoryParameters = array('allowedTypes');
-	}
-
-	public function check() {
+	/**
+	 * Validates that an uploaded file via specified field matches one of the given file types
+	 *
+	 * @param array &$check The TypoScript settings for this error check
+	 * @param string $name The field name
+	 * @param array &$gp The current GET/POST parameters
+	 * @return string The error string
+	 */
+	public function check(&$check, $name, &$gp) {
 		$checkFailed = '';
-		$allowed = $this->utilityFuncs->getSingle($this->settings['params'], 'allowedTypes');
+		$allowed = Tx_Formhandler_StaticFuncs::getSingle($check['params'], 'allowedTypes');
 		foreach ($_FILES as $sthg => &$files) {
 			if (strlen($files['name'][$name]) > 0) {
 				if ($allowed) {
@@ -39,7 +42,7 @@ class Tx_Formhandler_ErrorCheck_FileAllowedTypes extends Tx_Formhandler_Abstract
 					$fileext = strtolower($fileext);
 					if (!in_array($fileext, $types)) {
 						unset($files);
-						$checkFailed = $this->getCheckFailed();
+						$checkFailed = $this->getCheckFailed($check);
 					}
 				}
 			}

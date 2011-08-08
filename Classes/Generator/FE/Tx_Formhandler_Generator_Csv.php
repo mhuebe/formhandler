@@ -10,8 +10,8 @@ class Tx_Formhandler_Generator_Csv extends Tx_Formhandler_AbstractGenerator {
 	 */
 	public function process() {
 		$params = $this->gp;
-		$exportParams = $this->utilityFuncs->getSingle($this->settings, 'exportParams');
-		if (!is_array($exportParams) && strpos($exportParams, ',') !== FALSE) {
+		$exportParams = Tx_Formhandler_StaticFuncs::getSingle($this->settings, 'exportParams');
+		if (!is_array($exportParams)) {
 			$exportParams = t3lib_div::trimExplode(',', $exportParams);
 		}
 
@@ -20,7 +20,7 @@ class Tx_Formhandler_Generator_Csv extends Tx_Formhandler_AbstractGenerator {
 			if (is_array($value)) {
 				$value = implode(',', $value);
 			}
-			if (!empty($exportParams) && !in_array($key, $exportParams)) {
+			if (count($exportParams) > 0 && !in_array($key, $exportParams)) {
 				unset($params[$key]);
 			}
 			$value = str_replace('"', '""', $value);
@@ -28,31 +28,12 @@ class Tx_Formhandler_Generator_Csv extends Tx_Formhandler_AbstractGenerator {
 
 		// create new parseCSV object.
 		$csv = new parseCSV();
-		if($this->settings['delimiter']) {
-			$csv->delimiter = $csv->output_delimiter = $this->utilityFuncs->getSingle($this->settings, 'delimiter');
-		}
-		if($this->settings['enclosure']) {
-			$csv->enclosure = $this->utilityFuncs->getSingle($this->settings, 'enclosure');
-		}
-		if(intval($this->settings['returnFileName']) === 1) {
-			$outputPath = $this->utilityFuncs->getDocumentRoot();
-			if ($this->settings['customTempOutputPath']) {
-				$outputPath .= $this->utilityFuncs->sanitizePath($this->settings['customTempOutputPath']);
-			} else {
-				$outputPath .= '/typo3temp/';
-			}
-			$filename = $outputPath . $this->settings['filePrefix'] . $this->utilityFuncs->generateHash() . '.csv';
-			$csv->save($filename, $data, FALSE, $params);
-
-			return $filename;
-		} else {
-			$csv->output('formhandler.csv', $data, $params);
-			die();
-		}
+		$csv->output('formhandler.csv', $data, $params);
+		die();
 	}
 
 	protected function getComponentLinkParams($linkGP) {
-		$prefix = $this->globals->getFormValuesPrefix();
+		$prefix = Tx_Formhandler_Globals::$formValuesPrefix;
 		$tempParams = array(
 			'action' => 'csv'
 		);

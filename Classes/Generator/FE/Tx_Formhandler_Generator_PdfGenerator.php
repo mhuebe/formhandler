@@ -12,20 +12,12 @@ class Tx_Formhandler_Generator_PdfGenerator extends Tx_Formhandler_AbstractGener
 	}
 
 	protected function getComponentLinkParams($linkGP) {
-		$prefix = $this->globals->getFormValuesPrefix();
-		$tempParams = array(
-			'action' => 'show'
-		);
-		$params = array();
-		if ($prefix) {
-			$params[$prefix] = $tempParams;
-		} else {
-			$params = $tempParams;
-		}
+		$prefix = Tx_Formhandler_Globals::$formValuesPrefix;
 		$type = 123;
 		if ($this->settings['type']) {
 			$type = $this->settings['type'];
 		}
+		$params = array();
 		$params['type'] = $type;
 		return $params;
 	}

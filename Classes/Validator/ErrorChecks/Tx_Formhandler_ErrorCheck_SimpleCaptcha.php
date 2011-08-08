@@ -11,7 +11,7 @@
  * TABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General      *
  * Public License for more details.                                       *
  *
- * $Id: Tx_Formhandler_ErrorCheck_SimpleCaptcha.php 40269 2010-11-16 15:23:54Z reinhardfuehricht $
+ * $Id$
  *                                                                        */
 
 /**
@@ -21,16 +21,24 @@
  * @package	Tx_Formhandler
  * @subpackage	ErrorChecks
  */
-class Tx_Formhandler_ErrorCheck_WtCalculatingCaptcha extends Tx_Formhandler_AbstractErrorCheck {
+class Tx_Formhandler_ErrorCheck_SimpleCaptcha extends Tx_Formhandler_AbstractErrorCheck {
 
-	public function check() {
+	/**
+	 * Validates that the correct image of possible images displayed by the extension "simple_captcha" got selected.
+	 *
+	 * @param array &$check The TypoScript settings for this error check
+	 * @param string $name The field name
+	 * @param array &$gp The current GET/POST parameters
+	 * @return string The error string
+	 */
+	public function check(&$check, $name, &$gp) {
 		$checkFailed = '';
-		if (t3lib_extMgm::isLoaded('wt_calculating_captcha')) {
-			require_once(t3lib_extMgm::extPath('wt_calculating_captcha') . 'class.tx_wtcalculatingcaptcha.php');
-
-			$captcha = t3lib_div::makeInstance('tx_wtcalculatingcaptcha');
-			if (!$captcha->correctCode($this->gp[$this->formFieldName])) {
-				$checkFailed = $this->getCheckFailed();
+		if (t3lib_extMgm::isLoaded('simple_captcha')) {
+			require_once(t3lib_extMgm::extPath('simple_captcha') . 'class.tx_simplecaptcha.php');
+			$simpleCaptcha_className = t3lib_div::makeInstanceClassName('tx_simplecaptcha');
+			$this->simpleCaptcha = new $simpleCaptcha_className();
+			if (!$this->simpleCaptcha->checkCaptcha()) {
+				$checkFailed = $this->getCheckFailed($check);
 			}
 		}
 		return $checkFailed;

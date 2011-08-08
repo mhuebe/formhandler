@@ -23,27 +23,30 @@
  */
 class Tx_Formhandler_ErrorCheck_FileMinCount extends Tx_Formhandler_AbstractErrorCheck {
 
-	public function init($gp, $settings) {
-		parent::init($gp, $settings);
-		$this->mandatoryParameters = array('minCount');
-	}
-
-	public function check() {
+	/**
+	 * Validates that at least x files get uploaded via the specified upload field.
+	 *
+	 * @param array &$check The TypoScript settings for this error check
+	 * @param string $name The field name
+	 * @param array &$gp The current GET/POST parameters
+	 * @return string The error string
+	 */
+	public function check(&$check, $name, &$gp) {
 		$checkFailed = '';
 
-		$files = $this->globals->getSession()->get('files');
-		$settings = $this->globals->getSession()->get('settings');
-		$currentStep = $this->globals->getSession()->get('currentStep');
-		$lastStep = $this->globals->getSession()->get('lastStep');
-		$minCount = $this->utilityFuncs->getSingle($this->settings['params'], 'minCount');
+		$files = Tx_Formhandler_Globals::$session->get('files');
+		$settings = Tx_Formhandler_Globals::$session->get('settings');
+		$currentStep = Tx_Formhandler_Globals::$session->get('currentStep');
+		$lastStep = Tx_Formhandler_Globals::$session->get('lastStep');
+		$minCount = Tx_Formhandler_StaticFuncs::getSingle($check['params'], 'minCount');
 		if (is_array($files[$name]) &&
 			$currentStep > $lastStep) {
 
 			foreach ($_FILES as $idx => $info) {
 				if (strlen($info['name'][$name]) > 0 && count($files[$name]) < ($minCount - 1)) {
-					$checkFailed = $this->getCheckFailed();
+					$checkFailed = $this->getCheckFailed($check);
 				} elseif (strlen($info['name'][$name]) === 0 && count($files[$name]) < $minCount) {
-					$checkFailed = $this->getCheckFailed();
+					$checkFailed = $this->getCheckFailed($check);
 				}
 			}
 		}

@@ -102,18 +102,18 @@ class Tx_Formhandler_Finisher_DifferentDB extends Tx_Formhandler_Finisher_DB {
 			//insert query
 			if (!$this->doUpdate) {
 				$query = $GLOBALS['TYPO3_DB']->INSERTquery($this->table, $queryFields);
-				$this->utilityFuncs->debugMessage('sql_request', array($query));
+				Tx_Formhandler_StaticFuncs::debugMessage('sql_request', array($query));
 
 				//update query
 			} else {
 
 				//check if uid of record to update is in GP
-				$uid = $this->getUpdateUid();
+				$uid = $this->gp[$this->key];
 				if ($uid) {
 					$query = $GLOBALS['TYPO3_DB']->UPDATEquery($this->table, $this->key . '=' . $uid, $queryFields);
-					$this->utilityFuncs->debugMessage('sql_request', array($query));
+					Tx_Formhandler_StaticFuncs::debugMessage('sql_request', array($query));
 				} else {
-					$this->utilityFuncs->debugMessage('no_update_possible', array(), 2);
+					Tx_Formhandler_StaticFuncs::debugMessage('no_update_possible', array(), 2);
 				}
 			}
 
@@ -135,7 +135,7 @@ class Tx_Formhandler_Finisher_DifferentDB extends Tx_Formhandler_Finisher_DB {
 			//close connection
 			$conn->Close();
 		} else {
-			$this->utilityFuncs->throwException('extension_required', 'adodb', 'Tx_Formhandler_Finisher_DifferentDB');
+			Tx_Formhandler_StaticFuncs::throwException('extension_required', 'adodb', 'Tx_Formhandler_Finisher_DifferentDB');
 		}
 	}
 

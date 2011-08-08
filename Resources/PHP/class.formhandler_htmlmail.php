@@ -97,10 +97,10 @@ class formhandler_htmlmail {
 	 *
 	 * @return	void
 	 */
-	public function formhandler_htmlmail() {
+	public function t3lib_htmlmail() {
 		$this->forceReturnPath = $GLOBALS['TYPO3_CONF_VARS']['SYS']['forceReturnPath'];
 
-		$this->mailer = 'TYPO3 ' . TYPO3_version;
+		$this->mailer = 'TYPO3 '.TYPO3_version;
 	}
 
 
