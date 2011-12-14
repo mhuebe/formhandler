@@ -187,10 +187,9 @@ class Tx_Formhandler_Finisher_DB extends Tx_Formhandler_AbstractFinisher {
 			//check if uid of record to update is in GP
 			$uid = $this->getUpdateUid();
 			$recordExists = $this->doesRecordExist($uid);
-			$andWhere = $this->utilityFuncs->getSingle($this->settings, 'andWhere');
+			
 			if ($recordExists) {
-				$andWhere = $this->utilityFuncs->getSingle($this->settings, 'andWhere');
-				$this->doUpdate($uid, $queryFields, $andWhere);
+				$this->doUpdate($uid, $queryFields);
 			} elseif($this->settings['insertIfNoUpdatePossible']) {
 				$this->doInsert($queryFields);
 			} else {
@@ -221,21 +220,11 @@ class Tx_Formhandler_Finisher_DB extends Tx_Formhandler_AbstractFinisher {
 		}
 	}
 	
-	protected function doUpdate($uid, $queryFields, $andWhere) {
+	protected function doUpdate($uid, $queryFields) {
 		$uid = $GLOBALS['TYPO3_DB']->fullQuoteStr($uid, $this->table);
-		$andWhere = trim($andWhere);
-		if(substr($andWhere, 0, 3) === 'AND') {
-			$andWhere = trim(substr($andWhere, 3));
-		}
-		if(strlen($andWhere) > 0) {
-			$andWhere = ' AND ' . $andWhere;
-		}
-		$query = $GLOBALS['TYPO3_DB']->UPDATEquery($this->table, $this->key . '=' . $uid . $andWhere, $queryFields);
+		$query = $GLOBALS['TYPO3_DB']->UPDATEquery($this->table, $this->key . '=' . $uid, $queryFields);
 		$this->utilityFuncs->debugMessage('sql_request', array($query));
 		$res = $GLOBALS['TYPO3_DB']->sql_query($query);
-		if($GLOBALS['TYPO3_DB']->sql_error()) {
-			$this->utilityFuncs->debugMessage('error', array($GLOBALS['TYPO3_DB']->sql_error()), 3);
-		}
 	}
 
 	/**
@@ -295,16 +284,12 @@ class Tx_Formhandler_Finisher_DB extends Tx_Formhandler_AbstractFinisher {
 
 					//pre process the field value. e.g. to format a date
 					if (isset($options['preProcessing.']) && is_array($options['preProcessing.'])) {
-						if(!isset($options['preProcessing.']['value'])) {
-							$options['preProcessing.']['value'] = $fieldValue;
-						}
+						$options['preProcessing.']['value'] = $fieldValue;
 						$fieldValue = $this->utilityFuncs->getSingle($options, 'preProcessing');
 					}
 
 					if (isset($options['mapping.']) && is_array($options['mapping.'])) {
-						if(!isset($options['mapping.']['value'])) {
-							$options['mapping.']['value'] = $fieldValue;
-						}
+						$options['mapping.']['value'] = $fieldValue;
 						$fieldValue = $this->utilityFuncs->getSingle($options, 'mapping');
 					}
 
@@ -364,9 +349,7 @@ class Tx_Formhandler_Finisher_DB extends Tx_Formhandler_AbstractFinisher {
 
 			//post process the field value after formhandler did it's magic.
 			if (is_array($options['postProcessing.'])) {
-				if(!isset($options['postProcessing.']['value'])) {
-					$options['postProcessing.']['value'] = $fieldValue;
-				}
+				$options['postProcessing.']['value'] = $fieldValue;
 				$fieldValue = $this->utilityFuncs->getSingle($options, 'postProcessing');
 			}
 

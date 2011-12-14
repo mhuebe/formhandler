@@ -499,9 +499,8 @@ class Tx_Formhandler_UtilityFuncs {
 		} elseif (count($printfArgs) > 0) {
 			$message = vsprintf($message, $printfArgs);
 		}
-		$data = $this->recursiveHtmlSpecialChars($data);
 		foreach($this->globals->getDebuggers() as $idx => $debugger) {
-			$debugger->addToDebugLog(htmlspecialchars($message), $severity, $data);
+			$debugger->addToDebugLog($message, $severity, $data);
 		}
 	}
 
@@ -756,21 +755,6 @@ class Tx_Formhandler_UtilityFuncs {
 		}
 		$fileName = str_replace($search, $replace, $fileName);
 		return $fileName;
-	}
-	
-	public function recursiveHtmlSpecialChars($values) {
-		if(is_array($values)) {
-			foreach($values as &$value) {
-				if(is_array($value)) {
-					$value = $this->recursiveHtmlSpecialChars($value);
-				} else {
-					$value = htmlspecialchars($value);
-				}
-			}
-		} else {
-			$values = htmlspecialchars($values);
-		}
-		return $values;
 	}
 
 }

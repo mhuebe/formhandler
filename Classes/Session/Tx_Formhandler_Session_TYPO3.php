@@ -16,14 +16,10 @@ class Tx_Formhandler_Session_TYPO3 extends Tx_Formhandler_AbstractSession {
 		}
 
 		$data = $GLOBALS['TSFE']->fe_user->getKey('ses', 'formhandler');
-		if(is_array($data)) {
-			foreach($data as $hashedID => $sesData) {
-				if($this->globals->getFormValuesPrefix() === $sesData['formValuesPrefix'] && $sesData['creationTstamp'] < $threshold) {
-					unset($data[$hashedID]);
-				}
+		foreach($data as $hashedID => $sesData) {
+			if($this->globals->getFormValuesPrefix() === $sesData['formValuesPrefix'] && $sesData['creationTstamp'] < $threshold) {
+				unset($data[$hashedID]);
 			}
-		} else {
-			$data = array();
 		}
 
 		$GLOBALS['TSFE']->fe_user->setKey('ses', 'formhandler', $data);

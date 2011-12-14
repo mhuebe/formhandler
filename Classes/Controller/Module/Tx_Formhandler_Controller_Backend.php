@@ -272,19 +272,16 @@ class Tx_Formhandler_Controller_Backend extends Tx_Formhandler_AbstractControlle
 			$tsconfig = t3lib_BEfunc::getModTSconfig($this->id,'tx_formhandler_mod1'); 
 			$configParams = array();
 			
-			$className = 'Tx_Formhandler_Generator_TCPDF';
-			if($tsconfig['properties']['config.']['generators.']['pdf']) {
-				$className = $this->utilityFuncs->prepareClassName($tsconfig['properties']['config.']['generators.']['pdf']);
-			}
-			$generator = $this->componentManager->getComponent($className);
-			
 			// check if TSconfig filter is set
 			if (strlen($tsconfig['properties']['config.']['csv']) > 0) {
 				$configParams = t3lib_div::trimExplode(',', $tsconfig['properties']['config.']['pdf'], 1);
+				$generator = $this->componentManager->getComponent('Tx_Formhandler_Generator_TCPDF');
 				$generator->generateModulePDF($records, $configParams);	
 			} elseif (isset($gp['exportParams'])) {
-
+				
 				//if fields were chosen in selection view, export the records using the selected fields
+				
+				$generator = $this->componentManager->getComponent('Tx_Formhandler_Generator_TCPDF');
 				$generator->generateModulePDF($records, $gp['exportParams']);
 				
 				/*
@@ -352,26 +349,10 @@ class Tx_Formhandler_Controller_Backend extends Tx_Formhandler_AbstractControlle
 			if ($availableFormatsCount === 1) {
 				$tsconfig = t3lib_BEfunc::getModTSconfig($this->id,'tx_formhandler_mod1'); 
 				$configParams = array();
-				
-				if(!$tsconfig['properties']['config.']['csv.']['delimiter']) {
-					$tsconfig['properties']['config.']['csv.']['delimiter'] = ',';
-				}
-				if(!$tsconfig['properties']['config.']['csv.']['enclosure']) {
-					$tsconfig['properties']['config.']['csv.']['enclosure'] = '"';
-				}
-				if(!$tsconfig['properties']['config.']['csv.']['encoding']) {
-					$tsconfig['properties']['config.']['csv.']['encoding'] = '"';
-				}
-				
-				$className = 'Tx_Formhandler_Generator_CSV';
-				if($tsconfig['properties']['config.']['generators.']['csv']) {
-					$className = $this->utilityFuncs->prepareClassName($tsconfig['properties']['config.']['generators.']['csv']);
-				}
-				$generator = $this->componentManager->getComponent($className);
-
 				// check if TSconfig filter is set
 				if ($tsconfig['properties']['config.']['csv'] != "") {
 					$configParams = t3lib_div::trimExplode(',', $tsconfig['properties']['config.']['csv'], 1);
+					$generator = $this->componentManager->getComponent('Tx_Formhandler_Generator_CSV');
 					$generator->generateModuleCSV(
 						$records,
 						$configParams,
@@ -382,6 +363,7 @@ class Tx_Formhandler_Controller_Backend extends Tx_Formhandler_AbstractControlle
 				} elseif (isset($params['exportParams'])) {
 					
 					//if fields were chosen in the selection view, perform the export
+					$generator = $this->componentManager->getComponent('Tx_Formhandler_Generator_CSV');
 					$generator->generateModuleCSV(
 						$records,
 						$params['exportParams'],
@@ -420,10 +402,13 @@ class Tx_Formhandler_Controller_Backend extends Tx_Formhandler_AbstractControlle
 				// check if TSconfig filter is set
 				if ($tsconfig['properties']['config.']['csv'] != "") {
 					$configParams = t3lib_div::trimExplode(',', $tsconfig['properties']['config.']['csv'], 1);
+					$generator = $this->componentManager->getComponent('Tx_Formhandler_Generator_CSV');
 					$generator->generateModuleCSV($renderRecords, $configParams);	
 				} elseif (isset($params['exportParams'])) {
-
+					
 					//if fields were chosen in the selection view, perform the export
+					
+					$generator = $this->componentManager->getComponent('Tx_Formhandler_Generator_CSV');
 					$generator->generateModuleCSV($renderRecords, $params['exportParams']);
 
 					//no fields chosen, show selection view.
@@ -500,9 +485,6 @@ class Tx_Formhandler_Controller_Backend extends Tx_Formhandler_AbstractControlle
 		}
 
 		$markers['###EXPORTFIELDS###'] = '';
-		$markers['###EXPORTFIELDS###'] .= '<tr><td><input type="checkbox" name="formhandler[exportParams][]" value="ip" />' . $LANG->getLL('ip_address') . '</td></tr>';
-		$markers['###EXPORTFIELDS###'] .= '<tr><td><input type="checkbox" name="formhandler[exportParams][]" value="submission_date" />' . $LANG->getLL('submission_date') .  '</td></tr>';
-		$markers['###EXPORTFIELDS###'] .= '<tr><td><input type="checkbox" name="formhandler[exportParams][]" value="pid" />' . $LANG->getLL('page_id') . '</td></tr>';
 		
 		//add a label and a checkbox for each available parameter
 		foreach ($params as $field=>$value) {
@@ -814,9 +796,7 @@ class Tx_Formhandler_Controller_Backend extends Tx_Formhandler_AbstractControlle
 			$pid_search = array();
 			// check is page shall be accessed by current BE user
 			foreach ($pids as $pid) {
-				if (t3lib_BEfunc::readPageAccess(intval($pid), $GLOBALS['BE_USER']->getPagePermsClause(1))) {
-					$pid_search[] = intval($pid);
-				}
+				if (t3lib_BEfunc::readPageAccess(intval($pid))) $pid_search[] = intval($pid);
 			}
 			// check if there's a valid pid left
 			$this->pidFilter = (empty($pid_search)) ? 0 : implode(",", $pid_search);

@@ -34,8 +34,9 @@ class Tx_Formhandler_Validator_Ajax extends Tx_Formhandler_AbstractValidator {
 	 * @param array &$errors Reference to the errors array to store the errors occurred
 	 * @return boolean
 	 */
-	public function validateAjax($field, $value, &$errors) {
+	public function validateAjax($field, $value) {
 
+		$errors = array();
 		$found = FALSE;
 
 		$this->loadConfig();
@@ -106,7 +107,23 @@ class Tx_Formhandler_Validator_Ajax extends Tx_Formhandler_AbstractValidator {
 				}
 			}
 		}
-		return empty($errors);
+		$returnCode = '';
+		if (empty($errors)) {
+			
+			$okImg = $this->utilityFuncs->getSingle($this->settings['ajax.']['config.'], 'ok');
+			if(strlen($okImg) === 0) {
+				$okImg = '<img src="' . t3lib_extMgm::extRelPath('formhandler') . 'Resources/Images/ok.png' . '" />';
+			}
+			$returnCode = $okImg;
+		} else {
+			
+			$notOkImg = $this->utilityFuncs->getSingle($this->settings['ajax.']['config.'], 'notOk');
+			if(strlen($notOkImg) === 0) {
+				$notOkImg = '<img src="' . t3lib_extMgm::extRelPath('formhandler') . 'Resources/Images/notok.png' . '" />';
+			}
+			$returnCode = $notOkImg;
+		}
+		return $returnCode;
 	}
 
 	public function loadConfig() {

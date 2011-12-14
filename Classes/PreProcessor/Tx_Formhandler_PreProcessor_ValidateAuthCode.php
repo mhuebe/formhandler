@@ -48,14 +48,11 @@ class Tx_Formhandler_PreProcessor_ValidateAuthCode extends Tx_Formhandler_Abstra
 				$hiddenField = 'disable';
 				if($this->settings['hiddenField']) {
 					$hiddenField = $this->utilityFuncs->getSingle($this->settings, 'hiddenField');
-				} elseif($TCA[$table]['ctrl']['enablecolumns']['disable']) {
-					$hiddenField = $TCA[$table]['ctrl']['enablecolumns']['disable'];
+				} elseif($TCA[$table]['ctrl']['enablecolumns']['hidden']) {
+					$hiddenField = $TCA[$table]['ctrl']['enablecolumns']['hidden'];
 				}
-				$selectFields = '*';
-				if($this->settings['selectFields']) {
-					$selectFields = $this->utilityFuncs->getSingle($this->settings, 'selectFields');
-				}
-				$res = $GLOBALS['TYPO3_DB']->exec_SELECTquery($selectFields, $wrappedTable, $uidField . '=' . $uid . ' AND ' . $hiddenField . '=1' . $this->cObj->enableFields($table, 1));
+
+				$res = $GLOBALS['TYPO3_DB']->exec_SELECTquery('*', $wrappedTable, $uidField . '=' . $uid . ' AND ' . $hiddenField . '=1' . $this->cObj->enableFields($table, 1));
 				if(!$res || $GLOBALS['TYPO3_DB']->sql_num_rows($res) === 0) {
 					$this->utilityFuncs->throwException('validateauthcode_no_record_found');
 				}

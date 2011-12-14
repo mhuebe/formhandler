@@ -74,24 +74,15 @@ class Tx_Formhandler_Generator_CSV {
 					$param = implode(';', $param);
 				}
 			}
-			if (count($exportParams) == 0 || in_array('pid', $exportParams)) {
-				$record['params']['pid'] = $record['pid'];
-			}
-			if (count($exportParams) == 0 || in_array('submission_date', $exportParams)) {
-				$record['params']['submission_date'] = date('d.m.Y H:i:s', $record['crdate']);
-			}
-			if (count($exportParams) == 0 || in_array('ip', $exportParams)) {
-				$record['params']['ip'] = $record['ip'];
-			}
 			$data[] = $record['params'];
 		}
 		if (count($exportParams) > 0) {
 			foreach ($data as $idx => &$params) {
 
 				// fill missing fields with empty value
-				foreach ($exportParams as $key => $exportParam) {
-					if (!array_key_exists($exportParam, $params)) {
-						$params[$exportParam] = '';
+				foreach ($exportParams as $key => $param) {
+					if (!array_key_exists($param, $params)) {
+						$params[$param] = '';
 					}
 				}
 

@@ -38,8 +38,6 @@ class Tx_Formhandler_ErrorCheck_BetweenItems extends Tx_Formhandler_AbstractErro
 			count($this->gp[$this->formFieldName]) > intval($max))) {
 
 			$checkFailed = $this->getCheckFailed();
-		} elseif($min > 0) {
-			$checkFailed = $this->getCheckFailed();
 		}
 		return $checkFailed;
 	}
