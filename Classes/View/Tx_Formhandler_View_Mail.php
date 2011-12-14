@@ -37,7 +37,7 @@ class Tx_Formhandler_View_Mail extends Tx_Formhandler_View_Form {
 		$content = '';
 		if($this->subparts['template']) {
 			$this->settings = $this->globals->getSettings();
-			$content = parent::render($gp, array());
+			$content = parent::render($gp);
 		}
 		return $content;
 	}
@@ -47,12 +47,12 @@ class Tx_Formhandler_View_Mail extends Tx_Formhandler_View_Form {
 	}
 	
 	protected function fillValueMarkers() {
-		$componentSettings = $this->getComponentSettings();
-		if ($componentSettings[$this->currentMailSettings['mode']][$this->currentMailSettings['suffix'] . '.']['arrayValueSeparator']) {
-			$this->settings['arrayValueSeparator'] = $componentSettings[$this->currentMailSettings['mode']][$this->currentMailSettings['suffix'] . '.']['arrayValueSeparator'];
-			$this->settings['arrayValueSeparator.'] = $componentSettings[$this->currentMailSettings['mode']][$this->currentMailSettings['suffix'] . '.']['arrayValueSeparator.'];
- 		}
 		$markers = $this->getValueMarkers($this->gp);
+		$componentSettings = $this->getComponentSettings();
+		if ($componentSettings[$errors['mode']][$errors['suffix'] . '.']['arrayValueSeparator']) {
+			$this->settings['arrayValueSeparator'] = $componentSettings[$errors['mode']][$errors['suffix'] . '.']['arrayValueSeparator'];
+			$this->settings['arrayValueSeparator.'] = $componentSettings[$errors['mode']][$errors['suffix'] . '.']['arrayValueSeparator.'];
+		}
 		if ($this->currentMailSettings['suffix'] !== 'plain') {
 			$markers = $this->sanitizeMarkers($markers);
 		}
@@ -76,7 +76,7 @@ class Tx_Formhandler_View_Mail extends Tx_Formhandler_View_Form {
 			$paramsToCheck = t3lib_div::trimExplode(',', $checkBinaryCrLf);
 			foreach ($markers as $markerName => &$value) {
 				
-				$fieldName = str_replace(array('value_', 'VALUE_', '###'), '', $markerName);
+				$fieldName = strtolower(str_replace(array('value_', 'VALUE_', '###'), '', $markerName));
 				if(in_array($fieldName, $paramsToCheck)) {
 					$value = str_replace (chr(13), '', $value);
 					$value = str_replace ('\\', '', $value);
