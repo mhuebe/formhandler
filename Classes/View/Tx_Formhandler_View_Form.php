@@ -202,25 +202,19 @@ class Tx_Formhandler_View_Form extends Tx_Formhandler_AbstractView {
 
 		// recurse if there are more
 		if ( preg_match($pattern, $conditionValue, $matches) ){
-			$foundFields = array($matches[2], $matches[4]);
-			$operator = $matches[3];
-			foreach($foundFields as $field) {
-				$isset = $this->keyIsset($field);
-				if(strpos($field, '||') !== FALSE && !$isset) {
-					$return = $this->markersCountAsSet($field);
-				} if(strpos($field, '&&') !== FALSE && !$isset) {
-					$return = $this->markersCountAsSet($field);
-				} elseif ($operator === '||' && $isset) {
-					$return = TRUE;
-				} elseif ($operator === '&&' && $isset) {
-					$return = $this->markersCountAsSet($matches[4]);
-				} elseif ($operator === '&&' && !$isset) {
-					return FALSE;
-				} elseif ($matches[6] == '!' && !$isset) {
-					$return = !$this->keyIsset($matches[7]);
-				} elseif ($this->globals->getSession()->get('debug')) {
-					$this->utilityFuncs->debugMessage('invalid_isset', array($field), 2);
-				}
+			$isset = $this->keyIsset($matches[2]);
+			if ($matches[3] == '||' && $isset) {
+				$return = TRUE;
+			} elseif ($matches[3] == '||' && !$isset) {
+				$return = $this->markersCountAsSet($matches[4]);
+			} elseif ($matches[3] == '&&' && $isset) {
+				$return = $this->markersCountAsSet($matches[4]);
+			} elseif ($matches[3] == '&&' && !$isset) {
+				$return = FALSE;
+			} elseif ($matches[6] == '!' && !$isset) {
+				$return = !$this->keyIsset($matches[7]);
+			} elseif ($this->globals->getSession()->get('debug')) {
+				$this->utilityFuncs->debugMessage('invalid_isset', array($matches[2]), 2);
 			}
 		} else {
 
@@ -246,18 +240,16 @@ class Tx_Formhandler_View_Form extends Tx_Formhandler_AbstractView {
 		$key = str_replace(array(':', '[', ']'), array('|', '|', ''), $key);
 
 		if (!strpos($key, '|')) {
-			$value = trim($this->gp[$key]);
-			return !empty($value);
+			return !empty($this->gp[$key]);
 		}
 
 		$keys = explode('|', $key);
 
 		$tmp = $this->gp[array_shift($keys)];
 		foreach ($keys as $idx => $key) {
-			$value = trim($tmp[$key]);
-			if (empty($value)) {
+			if (empty($tmp[$key])) {
 				return FALSE;
-			} else {
+			}else {
 				$tmp = $tmp[$key];
 			}
 		}
