@@ -122,10 +122,6 @@ class Tx_Formhandler_View_Form extends Tx_Formhandler_AbstractView {
 
 		//remove markers that were not substituted
 		$content = $this->utilityFuncs->removeUnfilledMarkers($this->template);
-
-		if(is_array($this->settings['stdWrap.'])) {
-			$content = $this->cObj->stdWrap($content, $this->settings['stdWrap.']);
-		}
 		if(intval($this->settings['disableWrapInBaseClass']) !== 1) {
 			$content = $this->pi_wrapInBaseClass($content);
 		}
@@ -1012,7 +1008,6 @@ class Tx_Formhandler_View_Form extends Tx_Formhandler_AbstractView {
 					if (strlen($singleWrap) > 0 && strstr($singleWrap,'|')) {
 						$errorMessage = str_replace('|', $errorMessage, $singleWrap);
 					}
-					$errorMessage = $this->utilityFuncs->wrap($errorMessage, $this->settings['singleErrorTemplate.'], 'singleWrap');
 					$errorMessages[] = $errorMessage;
 				} else {
 					$this->utilityFuncs->debugMessage('no_error_message', array('error_' . $field . '_' . $type), 2);
