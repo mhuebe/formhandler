@@ -197,12 +197,11 @@ class Tx_Formhandler_Finisher_DB extends Tx_Formhandler_AbstractFinisher {
 		return $isSuccess;
 	}
 
-	protected function doesRecordExist($uid, $andWhere) {
+	protected function doesRecordExist($uid) {
 		$exists = FALSE;
 		if($uid) {
 			$uid = $GLOBALS['TYPO3_DB']->fullQuoteStr($uid, $this->table);
-			$andWhere = $this->utilityFuncs->prepareAndWhereString($andWhere);
-			$res = $GLOBALS['TYPO3_DB']->exec_SELECTquery($this->key, $this->table, $this->key . '=' . $uid . $andWhere);
+			$res = $GLOBALS['TYPO3_DB']->exec_SELECTquery($this->key, $this->table, $this->key . '=' . $uid);
 			if($res && $GLOBALS['TYPO3_DB']->sql_num_rows($res) > 0) {
 				$exists = TRUE;
 			}
@@ -270,8 +269,7 @@ class Tx_Formhandler_Finisher_DB extends Tx_Formhandler_AbstractFinisher {
 			//check if uid of record to update is in GP
 			$uid = $this->getUpdateUid();
 
-			$andWhere = $this->utilityFuncs->getSingle($this->settings, 'andWhere');
-			$recordExists = $this->doesRecordExist($uid, $andWhere);
+			$recordExists = $this->doesRecordExist($uid);
 			if ($recordExists) {
 				$this->doUpdate = TRUE;
 			} elseif(intval($this->utilityFuncs->getSingle($this->settings, 'insertIfNoUpdatePossible')) !== 1) {
@@ -342,41 +340,6 @@ class Tx_Formhandler_Finisher_DB extends Tx_Formhandler_AbstractFinisher {
 					}
 				} else {
 					switch ($options['special']) {
-						case 'saltedpassword':
-							$field = $this->utilityFuncs->getSingle($options['special.'], 'field');
-
-							$saltedpasswords = tx_saltedpasswords_div::returnExtConf();
-							$tx_saltedpasswords = t3lib_div::makeInstance($saltedpasswords['saltedPWHashingMethod']);
-							$encryptedPassword = $tx_saltedpasswords->getHashedPassword($this->gp[$field]);
-
-							$fieldValue = $encryptedPassword;
-							break;
-						case 'files':
-							$field = $this->utilityFuncs->getSingle($options['special.'], 'field');
-							if(isset($options['special.']['separator'])) {
-								$separator = $this->utilityFuncs->getSingle($options['special.'], 'separator');
-							} else {
-								$separator = ',';
-							}
-							$files = $this->globals->getSession()->get('files');
-							$filesArray = array();
-							if(isset($options['special.']['info'])) {
-								$info = $this->utilityFuncs->getSingle($options['special.'], 'info');
-							} else {
-								$info = '[uploaded_name]';
-							}
-							$files = $this->globals->getSession()->get('files');
-							if (isset($files[$field]) && is_array($files[$field])) {
-								foreach ($files[$field] as $idx => $file) {
-									$infoString = $info;
-									foreach($file as $infoKey=>$infoValue) {
-										$infoString = str_replace('[' . $infoKey . ']', $infoValue, $infoString);
-									}
-									array_push($filesArray, $infoString);
-								}
-							}
-							$fieldValue = implode($separator, $filesArray);
-							break;
 						case 'date':
 							$field = $this->utilityFuncs->getSingle($options['special.'], 'field');
 							$date = $this->gp[$field];

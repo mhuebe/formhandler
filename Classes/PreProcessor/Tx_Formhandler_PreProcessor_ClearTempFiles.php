@@ -67,7 +67,6 @@ class Tx_Formhandler_PreProcessor_ClearTempFiles extends Tx_Formhandler_Abstract
 
 			//build absolute path to upload folder
 			$path = $this->utilityFuncs->getDocumentRoot() . $uploadFolder;
-			$path = $this->utilityFuncs->sanitizePath($path);
 
 			//read files in directory
 			$tmpFiles = t3lib_div::getFilesInDir($path);

@@ -110,15 +110,6 @@ class Tx_Formhandler_AjaxHandler_Jquery extends Tx_Formhandler_AbstractAjaxHandl
 		}
 		$ajaxSubmit = $this->utilityFuncs->getSingle($settings['ajax.']['config.'], 'ajaxSubmit');
 		if(intval($ajaxSubmit) === 1) {
-			$ajaxSubmitCallback = $this->utilityFuncs->getSingle($settings['ajax.']['config.'], 'ajaxSubmitCallback');
-			$ajaxSubmitCallbackJS = '';
-			if(strlen($ajaxSubmitCallback) > 0) {
-				$ajaxSubmitCallbackJS = '
-					if (typeof(' . $ajaxSubmitCallback . ') == \'function\') {
-					' . $ajaxSubmitCallback . '(data, textStatus);
-					}
-				';
-			}
 			$js .= '
 			function submitButtonClick(el) {
 				' . $this->jQueryAlias . '("' . $this->submitButtonSelector . '").attr("disabled", "disabled");
@@ -151,8 +142,6 @@ class Tx_Formhandler_AjaxHandler_Jquery extends Tx_Formhandler_AbstractAjaxHandl
 							' . $this->jQueryAlias . '("' . $this->formSelector . '").on("submit", function() {
 								return false;
 							});
-							attachValidationEvents();
-							' . $ajaxSubmitCallbackJS . '
 						}
 					}
 				});
@@ -314,11 +303,8 @@ class Tx_Formhandler_AjaxHandler_Jquery extends Tx_Formhandler_AbstractAjaxHandl
 		if(strlen($fieldJS) > 0) {
 			$fieldJS = '
 				<script type="text/javascript">
-				function attachValidationEvents() {
-					' . $fieldJS . '
-				}
 				' . $this->jQueryAlias . '(function() {
-					attachValidationEvents();
+					' . $fieldJS . '
 				});
 				</script>
 			';

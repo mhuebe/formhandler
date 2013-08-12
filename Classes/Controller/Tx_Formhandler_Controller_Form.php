@@ -1032,19 +1032,15 @@ class Tx_Formhandler_Controller_Form extends Tx_Formhandler_AbstractController {
 				foreach ($andConditions as $subSubIdx => $andCondition) {
 					if (strstr($andCondition, '!=')) {
 						list($field, $value) = t3lib_div::trimExplode('!=', $andCondition);
-						$value = $this->utilityFuncs->parseOperand($value, $this->gp);
 						$result = ($this->utilityFuncs->getGlobal($field, $this->gp) !== $value);
 					} elseif (strstr($andCondition, '=')) {
 						list($field, $value) = t3lib_div::trimExplode('=', $andCondition);
-						$value = $this->utilityFuncs->parseOperand($value, $this->gp);
 						$result = ($this->utilityFuncs->getGlobal($field, $this->gp) === $value);
 					} elseif (strstr($andCondition, '>')) {
 						list($field, $value) = t3lib_div::trimExplode('>', $andCondition);
-						$value = $this->utilityFuncs->parseOperand($value, $this->gp);
 						$result = ($this->utilityFuncs->getGlobal($field, $this->gp) > $value);
 					} elseif (strstr($andCondition, '<')) {
 						list($field, $value) = t3lib_div::trimExplode('<', $andCondition);
-						$value = $this->utilityFuncs->parseOperand($value, $this->gp);
 						$result = ($this->utilityFuncs->getGlobal($field, $this->gp) < $value);
 					} else {
 						$field = $andCondition;
@@ -1067,6 +1063,7 @@ class Tx_Formhandler_Controller_Form extends Tx_Formhandler_AbstractController {
 							}
 						}
 					}
+					
 					$results[] = ($result ? 'TRUE' : 'FALSE');
 				}
 				$orConditions[] = '(' . implode(' && ', $results) . ')';
@@ -1078,12 +1075,12 @@ class Tx_Formhandler_Controller_Form extends Tx_Formhandler_AbstractController {
 			if ($evaluation) {
 				$newSettings = $conditionSettings['isTrue.'];
 				if (is_array($newSettings)) {
-					$this->settings = $this->utilityFuncs->mergeConfiguration($this->settings, $newSettings);
+					$this->settings = t3lib_div::array_merge_recursive_overrule($this->settings, $newSettings);
 				}
 			} else {
 				$newSettings = $conditionSettings['else.'];
 				if (is_array($newSettings)) {
-					$this->settings = $this->utilityFuncs->mergeConfiguration($this->settings, $newSettings);
+					$this->settings = t3lib_div::array_merge_recursive_overrule($this->settings, $newSettings);
 				}
 			}
 		
@@ -1317,7 +1314,7 @@ class Tx_Formhandler_Controller_Form extends Tx_Formhandler_AbstractController {
 
 		//merge settings with specific settings for current step
 		if (isset($this->settings[$step . '.']) && is_array($this->settings[$step . '.'])) {
-			$this->settings = $this->utilityFuncs->mergeConfiguration($this->settings, $this->settings[$step . '.']);
+			$this->settings = t3lib_div::array_merge_recursive_overrule($this->settings, $this->settings[$step . '.']);
 		}
 		$this->globals->getSession()->set('settings', $this->settings);
 	}

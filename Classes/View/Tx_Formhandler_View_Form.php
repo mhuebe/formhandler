@@ -24,14 +24,6 @@
 class Tx_Formhandler_View_Form extends Tx_Formhandler_AbstractView {
 
 	/**
-	 * An array of fields to do not encode for output
-	 *
-	 * @access protected
-	 * @var array
-	 */
-	protected $disableEncodingFields;
-
-	/**
 	 * Main method called by the controller.
 	 *
 	 * @param array $gp The current GET/POST parameters
@@ -291,8 +283,8 @@ class Tx_Formhandler_View_Form extends Tx_Formhandler_AbstractView {
 				if($write) {
 					$replacement = '${1}';
 				}
-				$fullMarkerName = preg_quote($fullMarkerName, '/');
-				$fullEndMarker = preg_quote($fullEndMarker, '/');
+				$fullMarkerName = preg_quote($fullMarkerName);
+				$fullEndMarker = preg_quote($fullEndMarker);
 				$pattern = '/' . $fullMarkerName . '(.*?)' . $fullEndMarker . '/ism';
 				$this->template = preg_replace($pattern, $replacement, $this->template);
 			}
@@ -332,58 +324,48 @@ class Tx_Formhandler_View_Form extends Tx_Formhandler_AbstractView {
 		$conditionResult = FALSE;
 		switch($conditionOperator) {
 			case '!=':
-				$value = $this->utilityFuncs->parseOperand($valueConditions[2], $this->gp);
-				$conditionResult = $this->utilityFuncs->getGlobal($fieldName, $this->gp) != $value;
+				$conditionResult = $this->utilityFuncs->getGlobal($fieldName, $this->gp) != $valueConditions[2];
 				break;
 			case '^=':
-				$value = $this->utilityFuncs->parseOperand($valueConditions[2], $this->gp);
-				$conditionResult = strpos($this->utilityFuncs->getGlobal($fieldName, $this->gp), $value) === 0;
+				$conditionResult = strpos($this->utilityFuncs->getGlobal($fieldName, $this->gp), $valueConditions[2]) === 0;
 				break;
 			case '$=':
 				$gpValue = $this->utilityFuncs->getGlobal($fieldName, $this->gp);
 				$checkValue = substr($valueConditions[2], -strlen($gpValue));
-				$checkValue = $this->utilityFuncs->parseOperand($checkValue, $this->gp);
 				$conditionResult = (strcmp($checkValue, $gpValue) === 0);
 				break;
 			case '~=':
-				$value = $this->utilityFuncs->parseOperand($valueConditions[2], $this->gp);
-				$conditionResult = strpos($value, $this->utilityFuncs->getGlobal($fieldName, $this->gp)) !== FALSE;
+				$conditionResult = strpos($valueConditions[2], $this->utilityFuncs->getGlobal($fieldName, $this->gp)) !== FALSE;
 				break;
 			case '=':
-				$value = $this->utilityFuncs->parseOperand($valueConditions[2], $this->gp);
-				$conditionResult = $this->utilityFuncs->getGlobal($fieldName, $this->gp) == $value;
+				$conditionResult = $this->utilityFuncs->getGlobal($fieldName, $this->gp) == $valueConditions[2];
 				break;
 			case '>':
 				$value = $this->utilityFuncs->getGlobal($fieldName, $this->gp);
 				if(is_numeric($value)) {
-					$conditionResult = floatval($value) > floatval($this->utilityFuncs->parseOperand($valueConditions[2], $this->gp));
+					$conditionResult = floatval($value) > floatval($valueConditions[2]);
 				}
 				break;
 			case '<':
 				$value = $this->utilityFuncs->getGlobal($fieldName, $this->gp);
 				if(is_numeric($value)) {
-					$conditionResult = floatval($value) < floatval($this->utilityFuncs->parseOperand($valueConditions[2], $this->gp));
+					$conditionResult = floatval($value) < floatval($valueConditions[2]);
 				}
 				break;
 			case '>=':
 				$value = $this->utilityFuncs->getGlobal($fieldName, $this->gp);
 				if(is_numeric($value)) {
-					$conditionResult = floatval($value) >= floatval($this->utilityFuncs->parseOperand($valueConditions[2], $this->gp));
+					$conditionResult = floatval($value) >= floatval($valueConditions[2]);
 				}
 				break;
 			case '<=':
 				$value = $this->utilityFuncs->getGlobal($fieldName, $this->gp);
 				if(is_numeric($value)) {
-					$conditionResult = floatval($value) <= floatval($this->utilityFuncs->parseOperand($valueConditions[2], $this->gp));
+					$conditionResult = floatval($value) <= floatval($valueConditions[2]);
 				}
 				break;
 			default:
-				$value = $this->utilityFuncs->getGlobal($fieldName, $this->gp);
-				if(is_array($value)) {
-					$conditionResult = (count($value) > 0);
-				} else {
-					$conditionResult = strlen(trim($value)) > 0;
-				}
+				$conditionResult = strlen(trim($this->utilityFuncs->getGlobal($fieldName, $this->gp))) > 0;
 		}
 
 		return $conditionResult;
@@ -574,18 +556,7 @@ class Tx_Formhandler_View_Form extends Tx_Formhandler_AbstractView {
 
 		// submit name for previous page
 		$prevName = ' name="' . str_replace('#action#', 'prev', $name) . '" ';
-		$allowStepJumps = FALSE;
-		if(isset($this->settings['allowStepJumps'])) {
-			$allowStepJumps = (bool)$this->utilityFuncs->getSingle($this->settings, 'allowStepJumps');
-		}
-		$previousStep = $currentStepFromSession - 1;
-		if($allowStepJumps && $this->globals->getSession()->get('lastStep') < $currentStepFromSession) {
-			$previousStep = $this->globals->getSession()->get('lastStep');
-		}
-		if($previousStep < 1) {
-			$previousStep = 1;
-		}
-		$prevName = str_replace('#step#', $previousStep, $prevName);
+		$prevName = str_replace('#step#', $currentStepFromSession - 1, $prevName);
 		$markers['###submit_prevStep###'] = $prevName;
 
 			// submits for next/prev steps with template suffix
@@ -634,7 +605,9 @@ class Tx_Formhandler_View_Form extends Tx_Formhandler_AbstractView {
 			$nextName
 		);
 
-		$this->fillCaptchaMarkers($markers);
+		if(!$this->globals->isAjaxMode()) {
+			$this->fillCaptchaMarkers($markers);
+		}
 		$this->fillFEUserMarkers($markers);
 		$this->fillFileMarkers($markers);
 
@@ -751,12 +724,6 @@ class Tx_Formhandler_View_Form extends Tx_Formhandler_AbstractView {
 		}
 
 		$sessionFiles = $this->globals->getSession()->get('files');
-		
-		$requiredSign = $this->utilityFuncs->getSingle($settings, 'requiredSign');
-		if(strlen($requiredSign) === 0) {
-			$requiredSign = '*';
-		}
-		$requiredMarker = $this->utilityFuncs->getSingle($settings, 'requiredMarker');
 
 		//parse validation settings
 		if (is_array($settings['validators.'])) {
@@ -813,8 +780,11 @@ class Tx_Formhandler_View_Form extends Tx_Formhandler_AbstractView {
 												break;
 											case 'required':case 'fileRequired':case 'jmRecaptcha':case 'captcha':case 'srFreecap':case 'mathGuard':
 												if(!in_array('all', $disableErrorCheckFields) && !in_array($replacedFieldname, $disableErrorCheckFields)) {
+													$requiredSign = $this->utilityFuncs->getSingle($settings, 'requiredSign');
+													if(strlen($requiredSign) === 0) {
+														$requiredSign = '*';
+													}
 													$markers['###required_' . $replacedFieldname . '###'] = $requiredSign;
-													$markers['###requiredMarker_' . $replacedFieldname . '###'] = $requiredMarker;
 												}
 												break;
 										}
@@ -909,7 +879,7 @@ class Tx_Formhandler_View_Form extends Tx_Formhandler_AbstractView {
 					if (intval($settings['totalFilesMarkerTemplate.']['showThumbnails']) === 1) {
 						$markers['###total_uploadedFiles###'] .= $wrappedThumb;
 					} elseif (intval($settings['totalFilesMarkerTemplate.']['showThumbnails']) === 2) {
-						$markers['###total_uploadedFiles###'] .= $wrappedThumbFilename;
+						$markers['###total_uploadedFiles###'] .= wrappedThumbFilename;
 					} else {
 						$markers['###total_uploadedFiles###'] .= $wrappedFilename;
 					}
@@ -1093,10 +1063,6 @@ class Tx_Formhandler_View_Form extends Tx_Formhandler_AbstractView {
 	 */
 	protected function fillValueMarkers() {
 		$values = $this->gp;
-		$this->disableEncodingFields = array();
-		if($this->settings['disableEncodingFields']) {
-			$this->disableEncodingFields = explode(',', $this->utilityFuncs->getSingle($this->settings, 'disableEncodingFields'));
-		}
 		$markers = $this->getValueMarkers($this->gp);
 		$this->template = $this->cObj->substituteMarkerArray($this->template, $markers);
 
@@ -1107,7 +1073,7 @@ class Tx_Formhandler_View_Form extends Tx_Formhandler_AbstractView {
 
 	protected function getValueMarkers($values, $level = 0, $prefix = 'value_', $doEncode = TRUE) {
 		$markers = array();
-
+		
 		$arrayValueSeparator = $this->utilityFuncs->getSingle($this->settings, 'arrayValueSeparator');
 		if(strlen($arrayValueSeparator) === 0) {
 			$arrayValueSeparator = ',';
@@ -1129,9 +1095,7 @@ class Tx_Formhandler_View_Form extends Tx_Formhandler_AbstractView {
 					$v = implode($arrayValueSeparator, $v);
 					$level--;
 				} elseif($doEncode) {
-					if(!in_array($k, $this->disableEncodingFields)) {
-						$v = htmlspecialchars($v);
-					}
+					$v = htmlspecialchars($v);
 				}
 				$v = trim($v);
 				$markers['###' . $currPrefix . '###'] = $v;

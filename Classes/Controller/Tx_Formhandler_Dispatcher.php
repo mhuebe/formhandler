@@ -70,12 +70,10 @@ class Tx_Formhandler_Dispatcher extends tslib_pibase {
 			$templateFile = $this->pi_getFFvalue($this->cObj->data['pi_flexform'], 'template_file', 'sDEF');
 			$langFile = $this->pi_getFFvalue($this->cObj->data['pi_flexform'], 'lang_file', 'sDEF');
 			$predef = $this->pi_getFFvalue($this->cObj->data['pi_flexform'], 'predefined', 'sDEF');
-			
 			$this->globals->setCObj($this->cObj);
 			if($setup['usePredef']) {
 				$predef = $this->utilityFuncs->getSingle($setup, 'usePredef');
 			}
-			$this->globals->getCObj()->setCurrentVal($predef);
 			$this->globals->setPredef($predef);
 			$this->globals->setOverrideSettings($setup);
 			$this->componentManager = Tx_Formhandler_Component_Manager::getInstance();
@@ -108,17 +106,8 @@ class Tx_Formhandler_Dispatcher extends tslib_pibase {
 
 			$result = $controller->process();
 		} catch(Exception $e) {
-			t3lib_div::sysLog(
-				$e->getFile() . '(' . $e->getLine() . ')' . ' ' . $e->getMessage(),
-				'formhandler',
-				t3lib_div::SYSLOG_SEVERITY_ERROR
-			);
-			$result = $this->utilityFuncs->getTranslatedMessage($this->globals->getLangFiles(), 'fe-exception');
-			if(!$result) {
-				$result = '<div style="color:red; font-weight: bold">' . $this->utilityFuncs->getExceptionMessage('fe-exception') . '</div>';
-			}
+			$result = '<div style="color:red; font-weight: bold">' . $e->getMessage() . '</div>';
 			if ($this->globals->getSession() && $this->globals->getSession()->get('debug')) {
-				$result = '<div style="color:red; font-weight: bold">' . $e->getMessage() . '</div>';
 				$result .= '<div style="color:red; font-weight: bold">File: ' . $e->getFile() . '(' . $e->getLine() . ')</div>';
 				$result .= '<div style="color:red; font-weight: bold">' . $e->getTraceAsString() . '</div>';
 			}

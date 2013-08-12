@@ -84,7 +84,7 @@ class Tx_Formhandler_Generator_WebkitPdf extends Tx_Formhandler_AbstractGenerato
 		$params = $this->getDefaultLinkParams();
 		$componentParams = $this->getComponentLinkParams($linkGP);
 		if (is_array($componentParams)) {
-			$params = $this->utilityFuncs->mergeConfiguration($params, $componentParams);
+			$params = t3lib_div::array_merge_recursive_overrule($params, $componentParams);
 		}
 		$text = $this->getLinkText();
 		$this->url = $this->utilityFuncs->getHostname() . $this->cObj->getTypolink_URL($GLOBALS['TSFE']->id, $params);
