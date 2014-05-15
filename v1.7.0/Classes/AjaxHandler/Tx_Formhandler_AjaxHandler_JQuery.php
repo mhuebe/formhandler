@@ -219,15 +219,6 @@ class Tx_Formhandler_AjaxHandler_Jquery extends Tx_Formhandler_AbstractAjaxHandl
 			$markers['###loading_ajax-submit###'] = $ajaxSubmitLoader;
 		}
 
-		$ajaxValidationCallback = $this->utilityFuncs->getSingle($settings['ajax.']['config.'], 'ajaxValidationCallback');
-		$ajaxValidationCallbackJS = '';
-		if(strlen($ajaxValidationCallback) > 0) {
-			$ajaxValidationCallbackJS = '
-			if (typeof(' . $ajaxValidationCallback . ') == \'function\') {
-			' . $ajaxValidationCallback . '(field, result, isFieldValid);
-		}
-		';
-		}
 		if (is_array($settings['validators.']) && intval($this->utilityFuncs->getSingle($settings['validators.'],'disable')) !== 1) {
 			$fieldJS = '';
 			foreach ($settings['validators.'] as $key => $validatorSettings) {
@@ -292,16 +283,14 @@ class Tx_Formhandler_AjaxHandler_Jquery extends Tx_Formhandler_AbstractAjaxHandl
 							result.load(url, function() {
 								loading.hide();
 								result.show();
-								isFieldValid = false;
-								if(result.find("SPAN.error").length > 0) {
-									result.data("isValid", false);
-								} else {
-									isFieldValid = true;
-									result.data("isValid", true);
-								}
 						';
 						if(intval($autoDisableSubmitButton) === 1) {
 							$fieldJS .= '
+								if(result.find("SPAN.error").length > 0) {
+									result.data("isValid", false);
+								} else {
+									result.data("isValid", true);
+								}
 								var valid = true;
 								' . $this->jQueryAlias . '("' . $this->formSelector . ' .formhandler-ajax-validation-result").each(function() {
 									if(!' . $this->jQueryAlias . '(this).data("isValid")) {
@@ -318,7 +307,7 @@ class Tx_Formhandler_AjaxHandler_Jquery extends Tx_Formhandler_AbstractAjaxHandl
 								}
 							';
 						}
-						$fieldJS .= $ajaxValidationCallbackJS . '
+						$fieldJS .= '
 								});
 							});
 						';

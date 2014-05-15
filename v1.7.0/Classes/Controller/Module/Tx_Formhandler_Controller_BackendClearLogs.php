@@ -62,14 +62,16 @@ class Tx_Formhandler_Controller_BackendClearLogs extends Tx_Formhandler_Abstract
 	/**
 	 * init method to load translation data and set log table.
 	 *
-	 * @global $GLOBALS['LANG']
+	 * @global $LANG
 	 * @return void
 	 */
 	protected function init() {
+		global $LANG;
+
 		$tsconfig = t3lib_BEfunc::getModTSconfig($this->id, 'tx_formhandler_mod1');
 		$this->settings = $tsconfig['properties']['config.'];
 
-		$GLOBALS['LANG']->includeLLFile('EXT:formhandler/Resources/Language/locallang.xml');
+		$LANG->includeLLFile('EXT:formhandler/Resources/Language/locallang.xml');
 		$templatePath = t3lib_extMgm::extPath('formhandler') . 'Resources/HTML/backend/';
 		$templateFile = $templatePath . 'template.html';
 		$this->templateCode = t3lib_div::getURL($templateFile);
@@ -81,6 +83,7 @@ class Tx_Formhandler_Controller_BackendClearLogs extends Tx_Formhandler_Abstract
 	 * @return string rendered view
 	 */
 	public function process() {
+		global $LANG;
 		$content = '';
 
 		//init
@@ -96,8 +99,8 @@ class Tx_Formhandler_Controller_BackendClearLogs extends Tx_Formhandler_Abstract
 		//init gp params
 		$params = t3lib_div::_GP('formhandler');
 		if (isset($params['doDelete']) && intval($params['doDelete']) === 1) {
-			$messageHeader = $GLOBALS['LANG']->getLL('clear-logs-success-header');
-			$messageText = sprintf($GLOBALS['LANG']->getLL('clear-logs-success-message'), intval($rowCount));
+			$messageHeader = $LANG->getLL('clear-logs-success-header');
+			$messageText = sprintf($LANG->getLL('clear-logs-success-message'), intval($rowCount));
 			$message = t3lib_div::makeInstance('t3lib_FlashMessage', $messageText, $messageHeader);
 			$content = $message->render();
 			$this->clearTables();
@@ -121,10 +124,11 @@ class Tx_Formhandler_Controller_BackendClearLogs extends Tx_Formhandler_Abstract
 	/**
 	 * Returns HTML code for an overview table showing all found tables and how many rows are in them.
 	 *
-	 * @global $GLOBALS['LANG']
+	 * @global $LANG
 	 * @return string
 	 */
 	protected function getOverview($rowCount) {
+		global $LANG;
 		$code = $this->utilityFuncs->getSubpart($this->templateCode, '###CLEAR_LOGS###');
 		$markers = array();
 		$markers['###URL###'] = $_SERVER['PHP_SELF'];
@@ -132,11 +136,11 @@ class Tx_Formhandler_Controller_BackendClearLogs extends Tx_Formhandler_Abstract
 
 		$markers['###TABLES###'] = '';
 		if($rowCount > 0) {
-			$markers['###LLL:clear-logs-message###'] = sprintf($GLOBALS['LANG']->getLL('clear-logs-message'), intval($rowCount));
-			$markers['###LLL:clear###'] = $GLOBALS['LANG']->getLL('clear');
+			$markers['###LLL:clear-logs-message###'] = sprintf($LANG->getLL('clear-logs-message'), intval($rowCount));
+			$markers['###LLL:clear###'] = $LANG->getLL('clear');
 		} else {
 			$code = $this->utilityFuncs->getSubpart($this->templateCode, '###NO_LOGS###');
-			$markers['###LLL:clear-logs-message###'] = $GLOBALS['LANG']->getLL('no-logs-message');
+			$markers['###LLL:clear-logs-message###'] = $LANG->getLL('no-logs-message');
 		}
 		
 		return $this->utilityFuncs->substituteMarkerArray($code, $markers);

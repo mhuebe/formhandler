@@ -57,12 +57,6 @@ class Tx_Formhandler_PreProcessor_LoadDB extends Tx_Formhandler_AbstractPreProce
 	protected $data;
 
 	/**
-	 * @var Array $files as associative array.
-	 * @access protected
-	 */
-	protected $files;
-
-	/**
 	 * Main method called by the controller
 	 * 
 	 * @return Array GP
@@ -151,10 +145,10 @@ class Tx_Formhandler_PreProcessor_LoadDB extends Tx_Formhandler_AbstractPreProce
 		}
 		
 		if(isset($settings[$fieldname . '.']['type']) && $this->utilityFuncs->getSingle($settings[$fieldname . '.'], 'type') === 'upload') {
-			if(!$this->files) {
-				$this->files = array();
+			if(!$files) {
+				$files = array();
 			}
-			$this->files[$fieldname] = array();
+			$files[$fieldname] = array();
 			if(!empty($value)) {
 				$uploadPath = $this->utilityFuncs->getTempUploadFolder($fieldname);
 				$filesArray = $value;
@@ -172,7 +166,7 @@ class Tx_Formhandler_PreProcessor_LoadDB extends Tx_Formhandler_AbstractPreProce
 					}
 					
 					$uploadedUrl = str_replace('//', '/', $uploadedUrl);
-					$this->files[$fieldname][] = array (
+					$files[$fieldname][] = array (
 						'name' => $uploadFile,
 						'uploaded_name' => $uploadFile,
 						'uploaded_path' => PATH_site . $uploadPath,
@@ -181,7 +175,7 @@ class Tx_Formhandler_PreProcessor_LoadDB extends Tx_Formhandler_AbstractPreProce
 						'size' => filesize($file)
 					);
 				}
-				$this->globals->getSession()->set('files', $this->files);
+				$this->globals->getSession()->set('files', $files);
 			}
 		}
 		return $value;
